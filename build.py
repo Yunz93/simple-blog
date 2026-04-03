@@ -9,7 +9,7 @@ import re
 import shutil
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime
 
 import yaml
 import markdown
@@ -107,7 +107,7 @@ class BlogBuilder:
         slug = frontmatter.get('slug', os.path.splitext(filename)[0])
         title = frontmatter.get('title', slug)
         date = frontmatter.get('date')
-        if date and isinstance(date, datetime):
+        if date and isinstance(date, (datetime, date)):
             date = date.strftime('%Y-%m-%d')
         category = frontmatter.get('category', '未分类')
         tags = frontmatter.get('tags', [])
