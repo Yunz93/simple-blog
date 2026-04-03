@@ -9,7 +9,7 @@ import re
 import shutil
 import json
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date as date_cls, datetime
 
 import yaml
 import markdown
@@ -106,9 +106,9 @@ class BlogBuilder:
         filename = os.path.basename(filepath)
         slug = frontmatter.get('slug', os.path.splitext(filename)[0])
         title = frontmatter.get('title', slug)
-        date = frontmatter.get('date')
-        if date and isinstance(date, (datetime, date)):
-            date = date.strftime('%Y-%m-%d')
+        post_date = frontmatter.get('date')
+        if post_date and isinstance(post_date, (datetime, date_cls)):
+            post_date = post_date.strftime('%Y-%m-%d')
         category = frontmatter.get('category', '未分类')
         tags = frontmatter.get('tags', [])
         if isinstance(tags, str):
@@ -119,7 +119,7 @@ class BlogBuilder:
         post = {
             'title': title,
             'slug': slug,
-            'date': date,
+            'date': post_date,
             'category': category,
             'tags': tags,
             'description': description,
