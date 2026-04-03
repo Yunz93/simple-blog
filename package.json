@@ -1,0 +1,11 @@
+{
+  "name": "simple-blog",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "bash ./build.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

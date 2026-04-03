@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "components/page-header.html" import render as page_header %}
+
+{% block title %}标签 - {{ config.title }}{% endblock %}
+
+{% block content %}
+{{ page_header("文章标签") }}
+
+<section class="content-section">
+    <div class="container">
+        <div class="tags-cloud">
+            {% for tag, posts in tags.items() %}
+            <a href="/tag/{{ tag | lower | replace(' ', '-') }}/" class="tag-item" data-count="{{ posts | length }}">
+                {{ tag }}
+                <span class="tag-count">({{ posts | length }})</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

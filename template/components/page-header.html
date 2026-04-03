@@ -1,0 +1,11 @@
+{# 通用页面标题栏组件 - 使用宏 #}
+{% macro render(title, description=None) %}
+<section class="page-header">
+    <div class="container">
+        <h1 class="page-title">{{ title }}</h1>
+        {% if description %}
+        <p class="page-description">{{ description }}</p>
+        {% endif %}
+    </div>
+</section>
+{% endmacro %}

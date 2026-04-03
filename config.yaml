@@ -1,0 +1,18 @@
+# Simple Blog 配置
+title: "Simple Blog"
+description: "爱吾所爱，一生自在"
+author: "BXYZ"
+url: "https://example.com"
+posts_per_page: 10
+
+# 文章源目录配置（对接 markdown-press）
+posts_source: "../posts"  # 相对于 simple-blog 目录的文章源路径
+
+# 社交链接
+social:
+  github: ""
+  twitter: ""
+  email: ""
+
+# 网站设置
+footer: "© 2026 Simple Blog. All rights reserved."

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "components/page-header.html" import render as page_header %}
+
+{% block title %}{{ tag }} - {{ config.title }}{% endblock %}
+
+{% block content %}
+{{ page_header("标签: #" + tag, "共 " + posts | length | string + " 篇文章") }}
+
+<section class="content-section">
+    <div class="container">
+        <div class="posts-list">
+            {% for post in posts %}
+            <article class="post-card">
+                <div class="post-meta">
+                    {% if post.date %}
+                    <time class="post-date">{{ post.date }}</time>
+                    {% endif %}
+                    {% if post.category %}
+                    <a href="/category/{{ post.category | lower | replace(' ', '-') }}/" class="post-category">{{ post.category }}</a>
+                    {% endif %}
+                </div>
+                <h2 class="post-title">
+                    <a href="/posts/{{ post.slug }}/">{{ post.title }}</a>
+                </h2>
+                {% if post.description %}
+                <p class="post-excerpt">{{ post.description }}</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

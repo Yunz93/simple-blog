@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "components/page-header.html" import render as page_header %}
+
+{% block title %}分类 - {{ config.title }}{% endblock %}
+
+{% block content %}
+{{ page_header("文章分类") }}
+
+<section class="content-section">
+    <div class="container">
+        <div class="categories-grid">
+            {% for category, posts in categories.items() %}
+            <a href="/category/{{ category | lower | replace(' ', '-') }}/" class="category-card">
+                <h2 class="category-name">{{ category }}</h2>
+                <span class="category-count">{{ posts | length }} 篇文章</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
