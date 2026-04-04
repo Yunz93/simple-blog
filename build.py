@@ -229,11 +229,14 @@ class BlogBuilder:
             'tags': tags,
             'description': description,
             'content': html_content,
-            'search_paragraphs': self.extract_search_paragraphs(html_content),
+            'search_entries': self.extract_search_paragraphs(html_content),
+            'search_paragraphs': [],
             'draft': draft,
             'filepath': filepath,
             'filename': filename
         }
+
+        post['search_paragraphs'] = [entry['text'] for entry in post['search_entries'] if entry.get('text')]
         
         # 安全验证
         self.validate_post(post, filepath)
@@ -381,6 +384,7 @@ class BlogBuilder:
                 'slug': post['slug'],
                 'description': post['description'],
                 'search_paragraphs': post.get('search_paragraphs', []),
+                'search_entries': post.get('search_entries', []),
                 'category': post['category'],
                 'tags': post['tags'],
                 'date': date_str

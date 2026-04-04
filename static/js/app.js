@@ -174,7 +174,8 @@ class Search {
         const descriptionScore = this.getMatchScore(item.description, keywords);
         const categoryScore = this.getMatchScore(item.category, keywords);
         const tagScore = (item.tags || []).reduce((score, tag) => score + this.getMatchScore(tag, keywords), 0);
-        const paragraphMatch = this.findBestParagraph(item.search_paragraphs || [], keywords);
+        const searchEntries = item.search_entries || item.search_paragraphs || [];
+        const paragraphMatch = this.findBestParagraph(searchEntries, keywords);
 
         const score = titleScore * 5 + descriptionScore * 3 + categoryScore * 2 + tagScore * 2 + paragraphMatch.score * 4;
         if (score === 0) {

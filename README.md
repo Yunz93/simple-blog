@@ -10,7 +10,7 @@
 - 📝 **Markdown 支持** - 完整支持 Markdown 语法，包括代码高亮
 - 🏷️ **分类与标签** - 通过 YAML Frontmatter 实现灵活的分类和标签过滤
 - 🔍 **全文搜索** - 内置搜索功能，Cmd/Ctrl+K 快速唤起
-- 🎨 **现代设计** - 简洁优雅的仓耳今楷字体，支持深色模式
+- 🎨 **现代设计** - 默认使用霞鹜文楷，支持深色模式
 - 📱 **响应式** - 完美适配桌面和移动设备
 - 🔗 **markdown-press 对接** - 支持从 markdown-press 项目快速发布
 
@@ -191,7 +191,7 @@ draft: false
 
 ## 字体
 
-使用 [仓耳今楷 (TsangerJinKai02)](https://tw93.fun/) 作为中文字体，优雅清晰。
+使用 [霞鹜文楷 (LXGW WenKai)](https://github.com/lxgw/LxgwWenKai) 作为默认中文字体，并在仓库内自托管网页字体资源。
 
 ## License
 
