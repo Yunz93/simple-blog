@@ -95,6 +95,12 @@ class Search {
         this.modal?.addEventListener('click', (e) => {
             if (e.target === this.modal) this.close();
         });
+
+        this.results?.addEventListener('click', (e) => {
+            if (e.target.closest('.search-result-item')) {
+                this.close();
+            }
+        });
         
         // 使用防抖优化搜索输入性能
         const debouncedSearch = debounce((value) => this.search(value), 200);
@@ -146,19 +152,20 @@ class Search {
             return;
         }
 
-        this.results.innerHTML = matches.map(({ item, excerpt }) => `
-            <div class="search-result-item" onclick="window.location.href='/posts/${item.slug}/'">
+        this.results.innerHTML = matches.map(({ item, excerpt, sectionTitle, targetPath }) => `
+            <a class="search-result-item" href="${this.escapeHtml(targetPath)}">
                 <div class="search-result-title">${this.highlightText(item.title, keywords)}</div>
                 <div class="search-result-meta">
                     ${item.date || ''} ${item.category ? `· ${this.escapeHtml(item.category)}` : ''}
                 </div>
+                ${sectionTitle ? `<div class="search-result-section">章节 · ${this.highlightText(sectionTitle, keywords)}</div>` : ''}
                 ${excerpt ? `<div class="search-result-excerpt">${this.highlightText(excerpt, keywords)}</div>` : ''}
                 ${item.tags?.length ? `
                     <div class="search-result-tags">
                         ${item.tags.map(tag => `<span class="search-result-tag">${this.highlightText(tag, keywords)}</span>`).join('')}
                     </div>
                 ` : ''}
-            </div>
+            </a>
         `).join('');
     }
 
@@ -180,21 +187,50 @@ class Search {
         return {
             item,
             score,
-            excerpt
+            excerpt,
+            sectionTitle: paragraphMatch.sectionTitle,
+            targetPath: paragraphMatch.sectionAnchor
+                ? `/posts/${item.slug}/#${paragraphMatch.sectionAnchor}`
+                : `/posts/${item.slug}/`
         };
     }
 
     findBestParagraph(paragraphs, keywords) {
-        let best = { score: 0, text: '' };
+        let best = { score: 0, text: '', sectionTitle: '', sectionAnchor: '' };
 
-        paragraphs.forEach(paragraph => {
-            const score = this.getMatchScore(paragraph, keywords);
+        paragraphs.forEach((paragraph) => {
+            const entry = this.normalizeSearchEntry(paragraph);
+            const textScore = this.getMatchScore(entry.text, keywords);
+            const sectionScore = this.getMatchScore(entry.sectionTitle, keywords);
+            const score = textScore * 2 + sectionScore * 3;
+
             if (score > best.score) {
-                best = { score, text: paragraph };
+                best = {
+                    score,
+                    text: entry.text,
+                    sectionTitle: entry.sectionTitle,
+                    sectionAnchor: entry.sectionAnchor
+                };
             }
         });
 
         return best;
+    }
+
+    normalizeSearchEntry(entry) {
+        if (typeof entry === 'string') {
+            return {
+                text: entry,
+                sectionTitle: '',
+                sectionAnchor: ''
+            };
+        }
+
+        return {
+            text: entry?.text || '',
+            sectionTitle: entry?.section_title || '',
+            sectionAnchor: entry?.section_anchor || ''
+        };
     }
 
     tokenizeQuery(query) {
