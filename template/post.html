@@ -36,21 +36,24 @@
             <a href="/" class="back-link">&larr; 返回首页</a>
         </footer>
         
+        {% set giscus = config.get('giscus', {}) %}
+        {% set giscus_enabled = giscus.get('enabled') and giscus.get('repo') and giscus.get('repo_id') and giscus.get('category') and giscus.get('category_id') %}
+        {% if giscus_enabled %}
         <!-- Giscus 评论框 -->
         <section class="post-comments">
             <div class="giscus-container">
                 <script src="https://giscus.app/client.js"
-                    data-repo="bxyz/bxyz-blog-comments"
-                    data-repo-id=""
-                    data-category="Announcements"
-                    data-category-id=""
-                    data-mapping="pathname"
-                    data-strict="0"
-                    data-reactions-enabled="1"
-                    data-emit-metadata="0"
-                    data-input-position="bottom"
-                    data-theme="preferred_color_scheme"
-                    data-lang="zh-CN"
+                    data-repo="{{ giscus.get('repo') }}"
+                    data-repo-id="{{ giscus.get('repo_id') }}"
+                    data-category="{{ giscus.get('category') }}"
+                    data-category-id="{{ giscus.get('category_id') }}"
+                    data-mapping="{{ giscus.get('mapping', 'pathname') }}"
+                    data-strict="{{ giscus.get('strict', '0') }}"
+                    data-reactions-enabled="{{ giscus.get('reactions_enabled', '1') }}"
+                    data-emit-metadata="{{ giscus.get('emit_metadata', '0') }}"
+                    data-input-position="{{ giscus.get('input_position', 'bottom') }}"
+                    data-theme="{{ giscus.get('theme', 'preferred_color_scheme') }}"
+                    data-lang="{{ giscus.get('lang', 'zh-CN') }}"
                     crossorigin="anonymous"
                     async>
                 </script>
@@ -59,6 +62,7 @@
                 <p class="comments-noscript">请启用 JavaScript 以查看评论。</p>
             </noscript>
         </section>
+        {% endif %}
     </div>
 </article>
 {% endblock %}
