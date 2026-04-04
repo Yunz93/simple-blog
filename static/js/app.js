@@ -72,18 +72,12 @@ class Search {
         this.trigger = document.querySelector('.search-trigger');
         
         this.data = [];
+        this.isSearchDataLoaded = false;
+        this.loadError = null;
         this.init();
     }
     
     async init() {
-        // 加载搜索数据
-        try {
-            const response = await fetch('/search.json');
-            this.data = await response.json();
-        } catch (e) {
-            console.error('加载搜索数据失败:', e);
-        }
-        
         // 绑定事件
         this.trigger?.addEventListener('click', (e) => {
             e.preventDefault();
@@ -117,6 +111,38 @@ class Search {
                 this.close();
             }
         });
+
+        await this.loadSearchData();
+    }
+
+    getSearchDataUrl() {
+        const url = new URL('/search.json', window.location.origin);
+        if (window.__BUILD_VERSION__) {
+            url.searchParams.set('v', window.__BUILD_VERSION__);
+        }
+        return url.toString();
+    }
+
+    async loadSearchData() {
+        try {
+            const response = await fetch(this.getSearchDataUrl(), {
+                cache: 'no-store'
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            this.data = await response.json();
+            this.isSearchDataLoaded = true;
+            this.loadError = null;
+
+            if (this.input?.value.trim()) {
+                this.search(this.input.value);
+            }
+        } catch (e) {
+            this.loadError = e;
+            this.isSearchDataLoaded = false;
+            console.error('加载搜索数据失败:', e);
+        }
     }
     
     open() {
@@ -124,6 +150,10 @@ class Search {
         this.input?.focus();
         this.input.value = '';
         this.results.innerHTML = '';
+
+        if (!this.isSearchDataLoaded && !this.loadError) {
+            this.results.innerHTML = '<div class="search-result-item"><div class="search-result-meta">搜索索引加载中...</div></div>';
+        }
     }
     
     close() {
@@ -133,6 +163,16 @@ class Search {
     search(query) {
         if (!query.trim()) {
             this.results.innerHTML = '';
+            return;
+        }
+
+        if (this.loadError) {
+            this.results.innerHTML = '<div class="search-result-item"><div class="search-result-meta">搜索索引加载失败，请刷新页面后重试</div></div>';
+            return;
+        }
+
+        if (!this.isSearchDataLoaded) {
+            this.results.innerHTML = '<div class="search-result-item"><div class="search-result-meta">搜索索引加载中...</div></div>';
             return;
         }
 

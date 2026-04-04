@@ -10,8 +10,9 @@ import shutil
 import json
 import html
 from pathlib import Path
-from datetime import date as date_cls, datetime
+from datetime import UTC, date as date_cls, datetime
 from html.parser import HTMLParser
+from urllib.parse import urlparse, urlunparse
 
 import yaml
 import markdown
@@ -107,6 +108,7 @@ class SearchContentParser(HTMLParser):
 class BlogBuilder:
     def __init__(self):
         self.config = self.load_config()
+        self.build_version = self.resolve_build_version()
         self.md = markdown.Markdown(extensions=[
             'fenced_code',
             'tables',
@@ -114,9 +116,22 @@ class BlogBuilder:
             'meta',
         ])
         self.env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+        self.env.globals['build_version'] = self.build_version
         self.posts = []
         self.categories = {}
         self.tags = {}
+
+    def resolve_build_version(self):
+        """生成部署版本号，用于静态资源缓存失效"""
+        vercel_sha = os.environ.get('VERCEL_GIT_COMMIT_SHA', '').strip()
+        if vercel_sha:
+            return vercel_sha[:12]
+
+        git_sha = os.environ.get('GIT_COMMIT_SHA', '').strip()
+        if git_sha:
+            return git_sha[:12]
+
+        return datetime.now(UTC).strftime('%Y%m%d%H%M%S')
     
     def load_config(self):
         """加载博客配置"""
@@ -180,6 +195,60 @@ class BlogBuilder:
 
         return paragraphs
 
+    def normalize_image_src(self, src):
+        """将 GitHub raw 页面链接转换为更直接的原始资源地址"""
+        parsed = urlparse(src)
+        path_parts = parsed.path.lstrip('/').split('/')
+
+        if parsed.scheme != 'https' or parsed.netloc != 'github.com':
+            return src
+
+        if len(path_parts) < 5 or path_parts[2] != 'raw':
+            return src
+
+        owner, repo, _, branch, *asset_path = path_parts
+        normalized_path = '/'.join([owner, repo, branch, *asset_path])
+
+        return urlunparse((
+            'https',
+            'raw.githubusercontent.com',
+            f'/{normalized_path}',
+            '',
+            parsed.query,
+            ''
+        ))
+
+    def ensure_tag_attribute(self, tag, name, value):
+        """仅在属性缺失时追加 HTML 属性"""
+        if re.search(rf'\b{name}\s*=', tag, flags=re.IGNORECASE):
+            return tag
+
+        return re.sub(r'\s*/?>$', f' {name}="{value}"\\g<0>', tag)
+
+    def optimize_image_tag(self, match):
+        """为文章图片补充懒加载属性并规范图源"""
+        tag = match.group(0)
+        src_match = re.search(r'\bsrc=(["\'])(.*?)\1', tag, flags=re.IGNORECASE)
+
+        if src_match:
+            src = html.unescape(src_match.group(2))
+            normalized_src = self.normalize_image_src(src)
+            if normalized_src != src:
+                escaped_src = html.escape(normalized_src, quote=True)
+                tag = (
+                    f"{tag[:src_match.start(2)]}"
+                    f"{escaped_src}"
+                    f"{tag[src_match.end(2):]}"
+                )
+
+        tag = self.ensure_tag_attribute(tag, 'loading', 'lazy')
+        tag = self.ensure_tag_attribute(tag, 'decoding', 'async')
+        return tag
+
+    def optimize_content_html(self, html_content):
+        """优化文章内容中的资源标签"""
+        return re.sub(r'<img\b[^>]*>', self.optimize_image_tag, html_content, flags=re.IGNORECASE)
+
     def parse_markdown(self, filepath):
         """解析 markdown 文件，提取 frontmatter 和内容"""
         # 文件大小检查（防止大文件攻击）
@@ -206,6 +275,7 @@ class BlogBuilder:
         # 渲染 markdown
         html_content = self.md.convert(body)
         self.md.reset()
+        html_content = self.optimize_content_html(html_content)
         
         # 提取元数据
         filename = os.path.basename(filepath)
@@ -295,7 +365,47 @@ class BlogBuilder:
         if os.path.exists(STATIC_DIR):
             dist_static = os.path.join(DIST_DIR, 'static')
             shutil.copytree(STATIC_DIR, dist_static)
+            self.version_static_assets(Path(dist_static))
             print("静态资源已复制")
+
+    def version_static_assets(self, dist_static):
+        """为 CSS 与字体资源追加构建版本，避免 immutable 缓存命中过期文件"""
+        css_path = dist_static / 'css' / 'style.css'
+        if css_path.exists():
+            css_content = css_path.read_text(encoding='utf-8')
+            css_content = css_content.replace(
+                "../fonts/lxgwwenkai-regular/result.css",
+                f"../fonts/lxgwwenkai-regular/result.css?v={self.build_version}"
+            )
+            css_content = css_content.replace(
+                "../fonts/lxgwwenkai-medium/result.css",
+                f"../fonts/lxgwwenkai-medium/result.css?v={self.build_version}"
+            )
+            css_content = css_content.replace(
+                "./jinkai.css",
+                f"./jinkai.css?v={self.build_version}"
+            )
+            css_path.write_text(css_content, encoding='utf-8')
+
+        for font_css_path in dist_static.rglob('result.css'):
+            font_css = font_css_path.read_text(encoding='utf-8')
+            font_css = re.sub(
+                r'url\((["\']?)(\./[^)"\']+\.woff2)\1\)',
+                lambda match: f'url({match.group(1)}{match.group(2)}?v={self.build_version}{match.group(1)})',
+                font_css
+            )
+            font_css_path.write_text(font_css, encoding='utf-8')
+
+        for legacy_font_css_path in (dist_static / 'css').glob('*.css'):
+            if legacy_font_css_path.name == 'style.css':
+                continue
+            legacy_css = legacy_font_css_path.read_text(encoding='utf-8')
+            legacy_css = re.sub(
+                r'url\((["\']?)(\.\./[^)"\']+\.woff2)\1\)',
+                lambda match: f'url({match.group(1)}{match.group(2)}?v={self.build_version}{match.group(1)})',
+                legacy_css
+            )
+            legacy_font_css_path.write_text(legacy_css, encoding='utf-8')
     
     def render_template(self, template_name, context, output_path):
         """渲染模板并保存"""

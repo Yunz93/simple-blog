@@ -19,14 +19,14 @@
     <!-- 性能优化：关键资源预连接 -->
     <link rel="preconnect" href="https://giscus.app" crossorigin>
     {% endif %}
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="shortcut icon" href="/static/favicon.svg">
+    <link rel="icon" href="/static/favicon.svg?v={{ build_version }}" type="image/svg+xml">
+    <link rel="shortcut icon" href="/static/favicon.svg?v={{ build_version }}">
     <meta name="theme-color" content="#2563eb">
     <!-- 主样式表 -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ build_version }}">
     
     <!-- 预加载关键字体（如果有） -->
-    <link rel="preload" href="/static/css/style.css" as="style">
+    <link rel="preload" href="/static/css/style.css?v={{ build_version }}" as="style">
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -69,7 +69,8 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
+    <script>window.__BUILD_VERSION__ = "{{ build_version }}";</script>
+    <script src="/static/js/app.js?v={{ build_version }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
