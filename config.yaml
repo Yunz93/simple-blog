@@ -22,7 +22,7 @@ footer: "© 2026 BxYZ Blog. All rights reserved."
 # 然后填入 repo、repo_id、category、category_id。
 giscus:
   enabled: true
-  repo: "Yunz93/bxyz-blog-comments"
+  repo: "Yunz93/bxyz-blog-storage"
   repo_id: "R_kgDOR5V5AA"
   category: "Announcements"
   category_id: "DIC_kwDOR5V5AM4C6AYG"
@@ -30,6 +30,6 @@ giscus:
   strict: "0"
   reactions_enabled: "1"
   emit_metadata: "0"
-  input_position: "bottom"
+  input_position: "top"
   theme: "preferred_color_scheme"
   lang: "zh-CN"
