@@ -1,10 +1,10 @@
 ---
-aliases: NewBingTab - 新的一页
+aliases: NewBingTab
 category: Creation
 tags:
   - 插件
 status: published
-link: NA
+link: https://yunz93.dev/posts/NewBingTab%20-%20%E6%96%B0%E7%9A%84%E4%B8%80%E9%A1%B5/
 date created: 2024-03-23 Sat 14:29:13
 date modified: 2024-03-23 Sat 14:46:39
 is_publish: true
