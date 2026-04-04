@@ -23,9 +23,9 @@ footer: "© 2026 BxYZ Blog. All rights reserved."
 giscus:
   enabled: true
   repo: "Yunz93/bxyz-blog-comments"
-  repo_id: "R_kgDOR5UzVw"
+  repo_id: "R_kgDOR4bvVQ"
   category: "Announcements"
-  category_id: "DIC_kwDOR5UzV84C6AMM"
+  category_id: "DIC_kwDOR4bvVc4C6ANa"
   mapping: "pathname"
   strict: "0"
   reactions_enabled: "1"
