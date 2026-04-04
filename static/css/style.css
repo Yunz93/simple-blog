@@ -2,14 +2,9 @@
    Simple Blog - 现代简洁风格
    ============================================ */
 
-/* TsangerJinKai02 字体 - 来自 tw93.fun */
-@font-face {
-    font-family: 'TsangerJinKai02';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('https://gw.alipayobjects.com/os/k/jinkai/tsanger-jinkai-w04-subset-1.woff2') format('woff2');
-}
+@import url('./jinkai.css');
+
+/* TsangerJinKai02 字体栈 - 与 tw93.fun 保持一致 */
 
 /* CSS 变量 */
 :root {
@@ -71,6 +66,13 @@ body {
     background-color: var(--background);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+kbd,
+samp,
+pre {
+    font-family: var(--font-mono);
 }
 
 a {
