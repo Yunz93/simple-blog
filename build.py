@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import json
+import html
 from pathlib import Path
 from datetime import date as date_cls, datetime
 
@@ -75,6 +76,23 @@ class BlogBuilder:
         
         return True
 
+    def extract_search_paragraphs(self, html_content):
+        """从 HTML 内容中提取纯文本段落，供前端搜索结果预览使用"""
+        text = html_content
+        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'</(p|div|h[1-6]|li|blockquote|pre|tr|ul|ol)>', '\n\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', text)
+        text = html.unescape(text)
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+        paragraphs = []
+        for block in re.split(r'\n\s*\n+', text):
+            cleaned = re.sub(r'\s+', ' ', block).strip()
+            if cleaned:
+                paragraphs.append(cleaned)
+
+        return paragraphs
+
     def parse_markdown(self, filepath):
         """解析 markdown 文件，提取 frontmatter 和内容"""
         # 文件大小检查（防止大文件攻击）
@@ -124,6 +142,7 @@ class BlogBuilder:
             'tags': tags,
             'description': description,
             'content': html_content,
+            'search_paragraphs': self.extract_search_paragraphs(html_content),
             'draft': draft,
             'filepath': filepath,
             'filename': filename
@@ -274,6 +293,7 @@ class BlogBuilder:
                 'title': post['title'],
                 'slug': post['slug'],
                 'description': post['description'],
+                'search_paragraphs': post.get('search_paragraphs', []),
                 'category': post['category'],
                 'tags': post['tags'],
                 'date': date_str

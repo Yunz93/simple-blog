@@ -687,6 +687,37 @@ img {
     color: var(--text-muted);
 }
 
+.search-result-excerpt {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+.search-result-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.search-result-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.search-highlight {
+    padding: 0 0.15em;
+    border-radius: 0.2em;
+    background: rgba(255, 212, 102, 0.45);
+    color: inherit;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .content-grid {

@@ -129,36 +129,159 @@ class Search {
             this.results.innerHTML = '';
             return;
         }
-        
-        const keyword = query.toLowerCase();
-        const matches = this.data.filter(item => {
-            return item.title.toLowerCase().includes(keyword) ||
-                   (item.description && item.description.toLowerCase().includes(keyword)) ||
-                   (item.tags && item.tags.some(tag => tag.toLowerCase().includes(keyword)));
-        }).slice(0, 10);
-        
-        this.renderResults(matches);
+
+        const keywords = this.tokenizeQuery(query);
+        const matches = this.data
+            .map(item => this.buildSearchResult(item, keywords))
+            .filter(Boolean)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+
+        this.renderResults(matches, keywords);
     }
-    
-    renderResults(matches) {
+
+    renderResults(matches, keywords) {
         if (matches.length === 0) {
             this.results.innerHTML = '<div class="search-result-item"><div class="search-result-meta">未找到相关文章</div></div>';
             return;
         }
-        
-        this.results.innerHTML = matches.map(item => `
+
+        this.results.innerHTML = matches.map(({ item, excerpt }) => `
             <div class="search-result-item" onclick="window.location.href='/posts/${item.slug}/'">
-                <div class="search-result-title">${this.escapeHtml(item.title)}</div>
+                <div class="search-result-title">${this.highlightText(item.title, keywords)}</div>
                 <div class="search-result-meta">
-                    ${item.date || ''} ${item.category ? `· ${item.category}` : ''}
+                    ${item.date || ''} ${item.category ? `· ${this.escapeHtml(item.category)}` : ''}
                 </div>
+                ${excerpt ? `<div class="search-result-excerpt">${this.highlightText(excerpt, keywords)}</div>` : ''}
+                ${item.tags?.length ? `
+                    <div class="search-result-tags">
+                        ${item.tags.map(tag => `<span class="search-result-tag">${this.highlightText(tag, keywords)}</span>`).join('')}
+                    </div>
+                ` : ''}
             </div>
         `).join('');
     }
-    
+
+    buildSearchResult(item, keywords) {
+        const titleScore = this.getMatchScore(item.title, keywords);
+        const descriptionScore = this.getMatchScore(item.description, keywords);
+        const categoryScore = this.getMatchScore(item.category, keywords);
+        const tagScore = (item.tags || []).reduce((score, tag) => score + this.getMatchScore(tag, keywords), 0);
+        const paragraphMatch = this.findBestParagraph(item.search_paragraphs || [], keywords);
+
+        const score = titleScore * 5 + descriptionScore * 3 + categoryScore * 2 + tagScore * 2 + paragraphMatch.score * 4;
+        if (score === 0) {
+            return null;
+        }
+
+        const excerptSource = paragraphMatch.text || item.description || '';
+        const excerpt = excerptSource ? this.truncateAroundMatch(excerptSource, keywords) : '';
+
+        return {
+            item,
+            score,
+            excerpt
+        };
+    }
+
+    findBestParagraph(paragraphs, keywords) {
+        let best = { score: 0, text: '' };
+
+        paragraphs.forEach(paragraph => {
+            const score = this.getMatchScore(paragraph, keywords);
+            if (score > best.score) {
+                best = { score, text: paragraph };
+            }
+        });
+
+        return best;
+    }
+
+    tokenizeQuery(query) {
+        const trimmed = query.trim();
+        if (!trimmed) {
+            return [];
+        }
+
+        const parts = trimmed.split(/\s+/).filter(Boolean);
+        return parts.length ? parts : [trimmed];
+    }
+
+    getMatchScore(text, keywords) {
+        if (!text || keywords.length === 0) {
+            return 0;
+        }
+
+        const lowerText = text.toLowerCase();
+        let matchedCount = 0;
+
+        keywords.forEach(keyword => {
+            if (lowerText.includes(keyword.toLowerCase())) {
+                matchedCount += 1;
+            }
+        });
+
+        if (matchedCount === 0) {
+            return 0;
+        }
+
+        return matchedCount === keywords.length ? matchedCount + 1 : matchedCount;
+    }
+
+    truncateAroundMatch(text, keywords, radius = 70) {
+        if (!text) {
+            return '';
+        }
+
+        const lowerText = text.toLowerCase();
+        const positions = keywords
+            .map(keyword => lowerText.indexOf(keyword.toLowerCase()))
+            .filter(index => index >= 0);
+
+        if (positions.length === 0 || text.length <= radius * 2) {
+            return text;
+        }
+
+        const firstMatch = Math.min(...positions);
+        const start = Math.max(0, firstMatch - radius);
+        const end = Math.min(text.length, firstMatch + radius);
+
+        return `${start > 0 ? '...' : ''}${text.slice(start, end).trim()}${end < text.length ? '...' : ''}`;
+    }
+
+    highlightText(text, keywords) {
+        if (!text) {
+            return '';
+        }
+
+        const escapedKeywords = [...new Set(keywords)]
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length)
+            .map(keyword => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+        if (escapedKeywords.length === 0) {
+            return this.escapeHtml(text);
+        }
+
+        const pattern = new RegExp(`(${escapedKeywords.join('|')})`, 'giu');
+        let lastIndex = 0;
+        let html = '';
+
+        for (const match of text.matchAll(pattern)) {
+            const index = match.index ?? 0;
+            const matchedText = match[0];
+            html += this.escapeHtml(text.slice(lastIndex, index));
+            html += `<mark class="search-highlight">${this.escapeHtml(matchedText)}</mark>`;
+            lastIndex = index + matchedText.length;
+        }
+
+        html += this.escapeHtml(text.slice(lastIndex));
+        return html;
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text || '';
         return div.innerHTML;
     }
 }
