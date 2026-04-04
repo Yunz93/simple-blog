@@ -6,17 +6,19 @@
     <title>{% block title %}{{ config.title }}{% endblock %}</title>
     <meta name="description" content="{% block description %}{{ config.description }}{% endblock %}">
     
-    <!-- 安全相关 Meta 标签 -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <!-- 安全相关 Meta 标签 (其他安全头由服务器通过 HTTP Header 设置) -->
     <meta name="referrer" content="strict-origin-when-cross-origin">
     
+    {% set giscus = config.get('giscus', {}) %}
+    {% set giscus_enabled = giscus.get('enabled') and giscus.get('repo') and giscus.get('repo_id') and giscus.get('category') and giscus.get('category_id') %}
+
     <!-- 性能优化：DNS 预解析 -->
+    {% if giscus_enabled %}
     <link rel="dns-prefetch" href="//giscus.app">
     
     <!-- 性能优化：关键资源预连接 -->
     <link rel="preconnect" href="https://giscus.app" crossorigin>
+    {% endif %}
     
     <!-- 主样式表 -->
     <link rel="stylesheet" href="/static/css/style.css">
