@@ -16,3 +16,20 @@ social:
 
 # 网站设置
 footer: "© 2026 BxYZ Blog. All rights reserved."
+
+# Giscus 评论配置
+# 使用前先在 https://giscus.app 为目标仓库安装 GitHub App，
+# 然后填入 repo、repo_id、category、category_id。
+giscus:
+  enabled: true
+  repo: "Yunz93/bxyz-blog-comments"
+  repo_id: "R_kgDOR5UzVw"
+  category: "Announcements"
+  category_id: "DIC_kwDOR5UzV84C6AMM"
+  mapping: "pathname"
+  strict: "0"
+  reactions_enabled: "1"
+  emit_metadata: "0"
+  input_position: "bottom"
+  theme: "preferred_color_scheme"
+  lang: "zh-CN"
