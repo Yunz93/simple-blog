@@ -1,5 +1,5 @@
 # Simple Blog 配置
-title: "Simple Blog"
+title: "BxYZ Blog"
 description: "爱吾所爱，一生自在"
 author: "BXYZ"
 url: "https://example.com"
@@ -15,4 +15,4 @@ social:
   email: ""
 
 # 网站设置
-footer: "© 2026 Simple Blog. All rights reserved."
+footer: "© 2026 BxYZ Blog. All rights reserved."

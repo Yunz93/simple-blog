@@ -5,7 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ config.title }}{% endblock %}</title>
     <meta name="description" content="{% block description %}{{ config.description }}{% endblock %}">
+    
+    <!-- 安全相关 Meta 标签 -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    
+    <!-- 性能优化：DNS 预解析 -->
+    <link rel="dns-prefetch" href="//giscus.app">
+    
+    <!-- 性能优化：关键资源预连接 -->
+    <link rel="preconnect" href="https://giscus.app" crossorigin>
+    
+    <!-- 主样式表 -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- 预加载关键字体（如果有） -->
+    <link rel="preload" href="/static/css/style.css" as="style">
 
     {% block extra_css %}{% endblock %}
 </head>

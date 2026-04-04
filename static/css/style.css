@@ -792,3 +792,67 @@ img {
 .hljs-class {
     color: #fbbf24;
 }
+
+/* ============================================
+   评论区样式 (Giscus)
+   ============================================ */
+
+.post-comments {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+}
+
+.giscus-container {
+    min-height: 200px;
+}
+
+.comments-noscript {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    background-color: var(--surface);
+    border-radius: var(--radius);
+}
+
+/* ============================================
+   性能优化相关样式
+   ============================================ */
+
+/* 懒加载占位 */
+img[data-src] {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+img[data-src].loaded {
+    animation: none;
+}
+
+/* 优化字体渲染 */
+html {
+    text-rendering: optimizeLegibility;
+}
+
+/* 减少动画偏好支持 (可访问性) */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    html {
+        scroll-behavior: auto;
+    }
+}

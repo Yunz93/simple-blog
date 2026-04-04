@@ -1,6 +1,66 @@
 /**
  * Simple Blog - 前端交互
+ * 包含性能优化和安全性增强
  */
+
+// 防抖函数 - 性能优化
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 节流函数 - 性能优化
+function throttle(func, limit) {
+    let inThrottle;
+    return function executedFunction(...args) {
+        if (!inThrottle) {
+            func(...args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// 图片懒加载 - 性能优化
+class LazyLoadImages {
+    constructor() {
+        this.images = document.querySelectorAll('img[data-src]');
+        this.init();
+    }
+    
+    init() {
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        imageObserver.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px 0px',
+                threshold: 0.01
+            });
+            
+            this.images.forEach(img => imageObserver.observe(img));
+        } else {
+            // 降级处理
+            this.images.forEach(img => {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+            });
+        }
+    }
+}
 
 // 搜索功能
 class Search {
@@ -36,7 +96,9 @@ class Search {
             if (e.target === this.modal) this.close();
         });
         
-        this.input?.addEventListener('input', (e) => this.search(e.target.value));
+        // 使用防抖优化搜索输入性能
+        const debouncedSearch = debounce((value) => this.search(value), 200);
+        this.input?.addEventListener('input', (e) => debouncedSearch(e.target.value));
         
         document.addEventListener('keydown', (e) => {
             // Cmd/Ctrl + K 打开搜索
@@ -204,4 +266,5 @@ document.addEventListener('DOMContentLoaded', () => {
     new MobileMenu();
     new CodeCopy();
     new SmoothScroll();
+    new LazyLoadImages();
 });

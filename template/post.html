@@ -35,6 +35,30 @@
         <footer class="post-footer">
             <a href="/" class="back-link">&larr; 返回首页</a>
         </footer>
+        
+        <!-- Giscus 评论框 -->
+        <section class="post-comments">
+            <div class="giscus-container">
+                <script src="https://giscus.app/client.js"
+                    data-repo="bxyz/bxyz-blog-comments"
+                    data-repo-id=""
+                    data-category="Announcements"
+                    data-category-id=""
+                    data-mapping="pathname"
+                    data-strict="0"
+                    data-reactions-enabled="1"
+                    data-emit-metadata="0"
+                    data-input-position="bottom"
+                    data-theme="preferred_color_scheme"
+                    data-lang="zh-CN"
+                    crossorigin="anonymous"
+                    async>
+                </script>
+            </div>
+            <noscript>
+                <p class="comments-noscript">请启用 JavaScript 以查看评论。</p>
+            </noscript>
+        </section>
     </div>
 </article>
 {% endblock %}
