@@ -168,6 +168,18 @@ class BlogBuilder:
         
         return True
 
+    @staticmethod
+    def resolve_frontmatter_value(frontmatter, key, fallback):
+        """获取 frontmatter 字段，缺失或留空时回退到默认值"""
+        value = frontmatter.get(key)
+        if value is None:
+            return fallback
+        if isinstance(value, str) and not value.strip():
+            return fallback
+        if isinstance(value, list) and not value:
+            return fallback
+        return value
+
     def extract_search_paragraphs(self, html_content):
         """从 HTML 内容中提取带章节信息的纯文本段落"""
         parser = SearchContentParser()
@@ -279,8 +291,21 @@ class BlogBuilder:
         
         # 提取元数据
         filename = os.path.basename(filepath)
-        slug = frontmatter.get('slug', os.path.splitext(filename)[0])
-        title = frontmatter.get('title', slug)
+        default_title = os.path.splitext(filename)[0]
+        title = self.resolve_frontmatter_value(frontmatter, 'title', default_title)
+        title = str(title).strip() or default_title
+        aliases = self.resolve_frontmatter_value(frontmatter, 'aliases', title)
+        if isinstance(aliases, str):
+            aliases = [aliases.strip()] if aliases.strip() else [title]
+        elif isinstance(aliases, list):
+            aliases = [str(alias).strip() for alias in aliases if str(alias).strip()]
+            if not aliases:
+                aliases = [title]
+        else:
+            alias_text = str(aliases).strip()
+            aliases = [alias_text] if alias_text else [title]
+        slug = self.resolve_frontmatter_value(frontmatter, 'slug', title)
+        slug = str(slug).strip() or title
         post_date = frontmatter.get('date')
         if post_date and isinstance(post_date, (datetime, date_cls)):
             post_date = post_date.strftime('%Y-%m-%d')
@@ -293,6 +318,7 @@ class BlogBuilder:
         
         post = {
             'title': title,
+            'aliases': aliases,
             'slug': slug,
             'date': post_date,
             'category': category,
@@ -491,6 +517,7 @@ class BlogBuilder:
                 date_str = date_str.strftime('%Y-%m-%d')
             search_data.append({
                 'title': post['title'],
+                'aliases': post.get('aliases', []),
                 'slug': post['slug'],
                 'description': post['description'],
                 'search_paragraphs': post.get('search_paragraphs', []),

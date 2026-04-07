@@ -166,6 +166,8 @@ footer: "© 2026 Simple Blog"
 ```markdown
 ---
 title: "文章标题"
+aliases: "article-title-en"
+slug: "article-title-url"
 date: 2026-03-31
 category: "技术"
 tags: ["Python", "Web"]
@@ -175,6 +177,13 @@ draft: false
 
 正文内容，支持 Markdown 语法...
 ```
+
+说明：
+
+- 文件名默认使用文章标题
+- `frontmatter.title` 对应文章标题
+- `frontmatter.aliases` 用于填写文章英文名；未填时回退为文章标题
+- `frontmatter.slug` 用于填写发布 URL 后缀；未填时回退为文章标题
 
 ## 自定义主题
 

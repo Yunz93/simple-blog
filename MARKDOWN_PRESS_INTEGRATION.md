@@ -99,6 +99,8 @@ markdown-press 的文章需要符合以下格式：
 ```markdown
 ---
 title: "文章标题"
+aliases: "article-title-en"
+slug: "article-title-url"
 date: 2026-03-31
 category: "技术"
 tags: ["Python", "Web"]
@@ -113,13 +115,20 @@ draft: false
 
 | 字段 | 必需 | 说明 |
 |------|------|------|
-| `title` | ✅ | 文章标题 |
+| `title` | ❌ | 文章标题，未填时回退为文件名（文章标题） |
+| `aliases` | ❌ | 文章英文名，未填时回退为文章标题 |
 | `date` | ❌ | 发布日期（YYYY-MM-DD）|
 | `category` | ❌ | 分类名称 |
 | `tags` | ❌ | 标签数组或逗号分隔字符串 |
 | `description` | ❌ | 文章描述/摘要 |
 | `draft` | ❌ | 草稿标记（true 不发布）|
-| `slug` | ❌ | 自定义 URL（默认使用文件名）|
+| `slug` | ❌ | 文章发布 URL 后缀，未填时回退为文章标题 |
+
+约定：
+
+- 文章标题默认就是文件名
+- `frontmatter.title`、`frontmatter.aliases`、`frontmatter.slug` 建议手动填写
+- 若这些字段缺失或留空，系统会统一回退到文章标题
 
 ## 图片处理
 

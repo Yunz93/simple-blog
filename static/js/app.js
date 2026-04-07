@@ -211,13 +211,14 @@ class Search {
 
     buildSearchResult(item, keywords) {
         const titleScore = this.getMatchScore(item.title, keywords);
+        const aliasScore = (item.aliases || []).reduce((score, alias) => score + this.getMatchScore(alias, keywords), 0);
         const descriptionScore = this.getMatchScore(item.description, keywords);
         const categoryScore = this.getMatchScore(item.category, keywords);
         const tagScore = (item.tags || []).reduce((score, tag) => score + this.getMatchScore(tag, keywords), 0);
         const searchEntries = item.search_entries || item.search_paragraphs || [];
         const paragraphMatch = this.findBestParagraph(searchEntries, keywords);
 
-        const score = titleScore * 5 + descriptionScore * 3 + categoryScore * 2 + tagScore * 2 + paragraphMatch.score * 4;
+        const score = titleScore * 5 + aliasScore * 4 + descriptionScore * 3 + categoryScore * 2 + tagScore * 2 + paragraphMatch.score * 4;
         if (score === 0) {
             return null;
         }
