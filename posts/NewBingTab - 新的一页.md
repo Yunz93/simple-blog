@@ -1,5 +1,5 @@
 ---
-aliases: NewBingTab
+slug: NewBingTab
 category: Creation
 tags:
   - 插件
