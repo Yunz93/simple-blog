@@ -5,7 +5,7 @@ category: tools
 tags:
   - obsidian
 status: done
-link: NA
+link: https://yunz93.dev/posts/obsidian-digital-garden/
 date created: 2022-12-27 Tue 23:02:54
 date modified: "2026-04-09"
 is_publish: true
@@ -22,7 +22,7 @@ title: 基于Obsidian发布静态博客
 
 得益于 Obsidian 出色的基础设计和活跃的社区环境，提供了大量的开源插件可以实现各种自定义的功能。基于两个月的调教，自我感觉现在 ob 的编辑体验已经超过 typora，当然表格编辑除外。（我个人不太喜欢在 md 文章中插入很多表格，所以其实也无所谓。）
 
-Obsidian 的使用后面我会单独再写一篇文章：[[01-Blog/Share/基于Obsidian构建个人知识库]]。（如果点进去没有文章，说明我还没写好😄）
+Obsidian 的使用后面我会单独再写一篇文章：[基于Obsidian构建个人知识库](https://yunz93.dev/posts/obsidian/)。（如果点进去没有文章，说明我还没写好😄）
 
 ## [obsidian-digital-garden](https://github.com/oleeskild/obsidian-digital-garden)
 
