@@ -5,9 +5,8 @@ category: 可乐周刊
 tags:
   - AI写歌
   - 浏览器插件
-  - 博客
 status: done
-link: NA
+link: https://yunz93.dev/posts/weekly-04/
 date created: 2024-03-24 Sun 17:45:01
 date modified: "2026-04-09"
 is_publish: true
