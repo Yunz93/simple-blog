@@ -9,6 +9,7 @@ import re
 import shutil
 import json
 import html
+import math
 from pathlib import Path
 from datetime import UTC, date as date_cls, datetime
 from html.parser import HTMLParser
@@ -180,6 +181,60 @@ class BlogBuilder:
             return fallback
         return value
 
+    @staticmethod
+    def normalize_datetime(value):
+        """统一为无时区 datetime，避免排序时混用 aware/naive 类型"""
+        if value.tzinfo is not None:
+            return value.astimezone(UTC).replace(tzinfo=None)
+        return value
+
+    def parse_timestamp_value(self, value):
+        """解析 frontmatter 中常见的日期/时间格式"""
+        if value is None:
+            return None
+
+        if isinstance(value, datetime):
+            return self.normalize_datetime(value)
+
+        if isinstance(value, date_cls):
+            return datetime.combine(value, datetime.min.time())
+
+        text = str(value).strip()
+        if not text:
+            return None
+
+        try:
+            return self.normalize_datetime(datetime.fromisoformat(text.replace('Z', '+00:00')))
+        except ValueError:
+            pass
+
+        for fmt in (
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d',
+            '%Y-%m-%d %a %H:%M:%S',
+            '%Y-%m-%d %A %H:%M:%S',
+        ):
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                continue
+
+        match = re.match(r'^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?', text)
+        if match:
+            if match.group(2):
+                return datetime.strptime(f"{match.group(1)} {match.group(2)}", '%Y-%m-%d %H:%M:%S')
+            return datetime.strptime(match.group(1), '%Y-%m-%d')
+
+        return None
+
+    def resolve_post_created_at(self, frontmatter):
+        """提取文章创建时间，缺失时回退到 date"""
+        created_at = self.parse_timestamp_value(frontmatter.get('date created'))
+        if created_at is not None:
+            return created_at
+
+        return self.parse_timestamp_value(frontmatter.get('date'))
+
     def extract_search_paragraphs(self, html_content):
         """从 HTML 内容中提取带章节信息的纯文本段落"""
         parser = SearchContentParser()
@@ -307,20 +362,25 @@ class BlogBuilder:
         slug = self.resolve_frontmatter_value(frontmatter, 'slug', title)
         slug = str(slug).strip() or title
         post_date = frontmatter.get('date')
-        if post_date and isinstance(post_date, (datetime, date_cls)):
-            post_date = post_date.strftime('%Y-%m-%d')
+        parsed_post_date = self.parse_timestamp_value(post_date)
+        if parsed_post_date is not None:
+            post_date = parsed_post_date.strftime('%Y-%m-%d')
+        elif post_date is not None:
+            post_date = str(post_date).strip() or None
         category = frontmatter.get('category', '未分类')
         tags = frontmatter.get('tags', [])
         if isinstance(tags, str):
             tags = [t.strip() for t in tags.split(',')]
         description = frontmatter.get('description', '')
         draft = frontmatter.get('draft', False)
-        
+        created_at = self.resolve_post_created_at(frontmatter)
+
         post = {
             'title': title,
             'aliases': aliases,
             'slug': slug,
             'date': post_date,
+            'created_at': created_at,
             'category': category,
             'tags': tags,
             'description': description,
@@ -356,13 +416,20 @@ class BlogBuilder:
         else:
             print(f"使用文章源目录: {posts_source}")
         
-        for md_file in posts_path.rglob('*.md'):
+        for md_file in sorted(posts_path.rglob('*.md')):
             post = self.parse_markdown(str(md_file))
             if not post['draft']:  # 跳过草稿
                 self.posts.append(post)
-        
-        # 按日期排序
-        self.posts.sort(key=lambda x: x['date'] or '', reverse=True)
+
+        # 按创建时间倒序排序，缺失时回退到 date
+        self.posts.sort(
+            key=lambda x: (
+                x['created_at'] is not None,
+                x['created_at'] or datetime.min,
+                x['date'] or '',
+            ),
+            reverse=True
+        )
         
         # 构建分类和标签索引
         for post in self.posts:
@@ -443,16 +510,49 @@ class BlogBuilder:
         
         with open(full_path, 'w', encoding='utf-8') as f:
             f.write(html)
+
+    @staticmethod
+    def build_index_page_url(page_number):
+        """返回首页分页 URL"""
+        if page_number <= 1:
+            return '/'
+        return f'/page/{page_number}/'
+
+    def build_pagination_context(self, current_page, total_pages):
+        """构建模板可直接使用的分页上下文"""
+        page_numbers = list(range(1, total_pages + 1))
+
+        return {
+            'current_page': current_page,
+            'total_pages': total_pages,
+            'page_numbers': page_numbers,
+            'has_prev': current_page > 1,
+            'has_next': current_page < total_pages,
+            'prev_url': self.build_index_page_url(current_page - 1) if current_page > 1 else None,
+            'next_url': self.build_index_page_url(current_page + 1) if current_page < total_pages else None,
+            'page_url': self.build_index_page_url,
+        }
     
     def generate_index(self):
         """生成首页"""
-        self.render_template('index.html', {
-            'config': self.config,
-            'posts': self.posts[:self.config.get('posts_per_page', 10)],
-            'categories': self.categories,
-            'tags': self.tags
-        }, 'index.html')
-        print("首页已生成")
+        posts_per_page = self.config.get('posts_per_page', 10)
+        total_posts = len(self.posts)
+        total_pages = max(1, math.ceil(total_posts / posts_per_page)) if posts_per_page > 0 else 1
+
+        for page_number in range(1, total_pages + 1):
+            start = (page_number - 1) * posts_per_page
+            end = start + posts_per_page
+            output_path = 'index.html' if page_number == 1 else f'page/{page_number}/index.html'
+
+            self.render_template('index.html', {
+                'config': self.config,
+                'posts': self.posts[start:end],
+                'categories': self.categories,
+                'tags': self.tags,
+                'pagination': self.build_pagination_context(page_number, total_pages)
+            }, output_path)
+
+        print(f"首页已生成，共 {total_pages} 页")
     
     def generate_posts(self):
         """生成文章页面"""

@@ -365,6 +365,61 @@ img {
     color: var(--primary);
 }
 
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+}
+
+.pagination-pages {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.pagination-link:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination-link.is-active {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination-link.is-disabled {
+    color: var(--text-muted);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.pagination-nav {
+    min-width: 88px;
+}
+
 /* 文章详情页 */
 .post-single {
     max-width: 800px;
@@ -788,6 +843,15 @@ img {
     
     .post-card {
         padding: 24px;
+    }
+
+    .pagination {
+        justify-content: center;
+    }
+
+    .pagination-pages {
+        order: -1;
+        width: 100%;
     }
     
     .post-single .post-title {

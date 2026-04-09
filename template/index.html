@@ -36,6 +36,32 @@
             </article>
             {% endfor %}
         </div>
+
+        {% if pagination and pagination.total_pages > 1 %}
+        <nav class="pagination" aria-label="文章分页">
+            {% if pagination.has_prev %}
+            <a href="{{ pagination.prev_url }}" class="pagination-link pagination-nav">上一页</a>
+            {% else %}
+            <span class="pagination-link pagination-nav is-disabled">上一页</span>
+            {% endif %}
+
+            <div class="pagination-pages">
+                {% for page_number in pagination.page_numbers %}
+                {% if page_number == pagination.current_page %}
+                <span class="pagination-link is-active">{{ page_number }}</span>
+                {% else %}
+                <a href="{{ pagination.page_url(page_number) }}" class="pagination-link">{{ page_number }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            {% if pagination.has_next %}
+            <a href="{{ pagination.next_url }}" class="pagination-link pagination-nav">下一页</a>
+            {% else %}
+            <span class="pagination-link pagination-nav is-disabled">下一页</span>
+            {% endif %}
+        </nav>
+        {% endif %}
     </div>
 </section>
 {% endblock %}
