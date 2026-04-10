@@ -41,3 +41,4 @@ Thumbs.db
 
 # Note: dist/ is excluded because GitHub Actions will build it
 # If you want to deploy to GitHub Pages manually, you may need to include it
+.omx/

@@ -527,6 +527,46 @@ img {
     margin: 24px 0;
 }
 
+.post-content video,
+.post-content iframe,
+.post-embed video,
+.post-embed iframe {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 24px 0;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: #000;
+    box-shadow: var(--shadow);
+}
+
+.post-content video,
+.post-embed video {
+    height: auto;
+}
+
+.post-content iframe,
+.post-embed iframe {
+    aspect-ratio: 16 / 9;
+}
+
+.post-embed {
+    margin: 24px 0;
+}
+
+.post-embed video,
+.post-embed iframe {
+    margin: 0;
+}
+
+.post-embed figcaption {
+    margin-top: 12px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    text-align: center;
+}
+
 .post-content table {
     width: 100%;
     border-collapse: collapse;

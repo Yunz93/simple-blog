@@ -13,7 +13,7 @@ import math
 from pathlib import Path
 from datetime import UTC, date as date_cls, datetime
 from html.parser import HTMLParser
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import yaml
 import markdown
@@ -107,6 +107,8 @@ class SearchContentParser(HTMLParser):
         return re.sub(r'\s+', ' ', text).strip()
 
 class BlogBuilder:
+    VIDEO_FILE_EXTENSIONS = ('.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v')
+
     def __init__(self):
         self.config = self.load_config()
         self.build_version = self.resolve_build_version()
@@ -262,7 +264,7 @@ class BlogBuilder:
 
         return paragraphs
 
-    def normalize_image_src(self, src):
+    def normalize_media_src(self, src):
         """将 GitHub raw 页面链接转换为更直接的原始资源地址"""
         parsed = urlparse(src)
         path_parts = parsed.path.lstrip('/').split('/')
@@ -285,12 +287,37 @@ class BlogBuilder:
             ''
         ))
 
+    def is_video_file_url(self, src):
+        """判断链接是否指向可直接播放的视频文件"""
+        parsed = urlparse(src)
+        path = parsed.path.lower()
+        return path.endswith(self.VIDEO_FILE_EXTENSIONS)
+
+    def get_video_mime_type(self, src):
+        """根据扩展名推断视频 MIME 类型"""
+        ext = Path(urlparse(src).path).suffix.lower()
+        return {
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm',
+            '.ogg': 'video/ogg',
+            '.ogv': 'video/ogg',
+            '.mov': 'video/quicktime',
+            '.m4v': 'video/mp4',
+        }.get(ext, 'video/mp4')
+
     def ensure_tag_attribute(self, tag, name, value):
         """仅在属性缺失时追加 HTML 属性"""
         if re.search(rf'\b{name}\s*=', tag, flags=re.IGNORECASE):
             return tag
 
         return re.sub(r'\s*/?>$', f' {name}="{value}"\\g<0>', tag)
+
+    def ensure_boolean_attribute(self, tag, name):
+        """仅在属性缺失时追加布尔属性"""
+        if re.search(rf'\b{name}\b', tag, flags=re.IGNORECASE):
+            return tag
+
+        return re.sub(r'\s*/?>$', f' {name}\\g<0>', tag)
 
     def optimize_image_tag(self, match):
         """为文章图片补充懒加载属性并规范图源"""
@@ -299,7 +326,7 @@ class BlogBuilder:
 
         if src_match:
             src = html.unescape(src_match.group(2))
-            normalized_src = self.normalize_image_src(src)
+            normalized_src = self.normalize_media_src(src)
             if normalized_src != src:
                 escaped_src = html.escape(normalized_src, quote=True)
                 tag = (
@@ -312,9 +339,138 @@ class BlogBuilder:
         tag = self.ensure_tag_attribute(tag, 'decoding', 'async')
         return tag
 
+    def optimize_source_tag(self, match):
+        """规范 video/source 等标签中的资源地址"""
+        tag = match.group(0)
+        src_match = re.search(r'\bsrc=(["\'])(.*?)\1', tag, flags=re.IGNORECASE)
+
+        if not src_match:
+            return tag
+
+        src = html.unescape(src_match.group(2))
+        normalized_src = self.normalize_media_src(src)
+        if normalized_src == src:
+            return tag
+
+        escaped_src = html.escape(normalized_src, quote=True)
+        return (
+            f"{tag[:src_match.start(2)]}"
+            f"{escaped_src}"
+            f"{tag[src_match.end(2):]}"
+        )
+
+    def optimize_video_tag(self, match):
+        """为原生 video 标签补充常用播放属性"""
+        tag = self.optimize_source_tag(match)
+        tag = self.ensure_boolean_attribute(tag, 'controls')
+        tag = self.ensure_boolean_attribute(tag, 'playsinline')
+        tag = self.ensure_tag_attribute(tag, 'preload', 'metadata')
+        return tag
+
+    def optimize_iframe_tag(self, match):
+        """为原生 iframe 标签补充懒加载和播放体验属性"""
+        tag = match.group(0)
+        tag = self.ensure_tag_attribute(tag, 'loading', 'lazy')
+        tag = self.ensure_tag_attribute(tag, 'referrerpolicy', 'strict-origin-when-cross-origin')
+        tag = self.ensure_tag_attribute(
+            tag,
+            'allow',
+            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+        )
+        tag = self.ensure_boolean_attribute(tag, 'allowfullscreen')
+        return tag
+
+    def get_video_embed_url(self, src):
+        """将常见视频平台链接转换为 iframe 可用的嵌入地址"""
+        parsed = urlparse(src)
+        host = parsed.netloc.lower().removeprefix('www.')
+        path = parsed.path.rstrip('/')
+        query = parse_qs(parsed.query)
+
+        if host in {'youtube.com', 'm.youtube.com'}:
+            if path == '/watch':
+                video_id = query.get('v', [''])[0]
+            elif path.startswith('/shorts/'):
+                video_id = path.split('/shorts/', 1)[1]
+            elif path.startswith('/embed/'):
+                video_id = path.split('/embed/', 1)[1]
+            else:
+                video_id = ''
+
+            if video_id:
+                return f'https://www.youtube.com/embed/{video_id}'
+
+        if host == 'youtu.be':
+            video_id = path.lstrip('/')
+            if video_id:
+                return f'https://www.youtube.com/embed/{video_id}'
+
+        if host == 'bilibili.com' or host.endswith('.bilibili.com'):
+            match = re.search(r'/video/([^/?]+)', path)
+            if match:
+                bvid = match.group(1)
+                page = query.get('p', ['1'])[0]
+                return f'https://player.bilibili.com/player.html?bvid={bvid}&page={page}'
+
+        return ''
+
+    @staticmethod
+    def strip_html_tags(text):
+        """移除 HTML 标签，保留纯文本说明"""
+        return re.sub(r'<[^>]+>', '', html.unescape(text or '')).strip()
+
+    def replace_link_only_paragraph_with_embed(self, match):
+        """将仅包含一个视频链接的段落转成内嵌播放器"""
+        href = html.unescape(match.group('href')).strip()
+        text = self.strip_html_tags(match.group('text'))
+        caption = text if text and text != href else ''
+
+        if self.is_video_file_url(href):
+            normalized_src = html.escape(self.normalize_media_src(href), quote=True)
+            mime_type = html.escape(self.get_video_mime_type(href), quote=True)
+            caption_html = (
+                f'<figcaption>{html.escape(caption)}</figcaption>'
+                if caption else ''
+            )
+            return (
+                '<figure class="post-embed post-embed-video">'
+                f'<video controls playsinline preload="metadata">'
+                f'<source src="{normalized_src}" type="{mime_type}">'
+                '当前浏览器不支持 video 标签播放该视频。'
+                '</video>'
+                f'{caption_html}'
+                '</figure>'
+            )
+
+        embed_url = self.get_video_embed_url(href)
+        if embed_url:
+            title = caption or 'Video embed'
+            return (
+                '<div class="post-embed post-embed-iframe">'
+                f'<iframe src="{html.escape(embed_url, quote=True)}" '
+                f'title="{html.escape(title, quote=True)}" '
+                'loading="lazy" '
+                'referrerpolicy="strict-origin-when-cross-origin" '
+                'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" '
+                'allowfullscreen></iframe>'
+                '</div>'
+            )
+
+        return match.group(0)
+
     def optimize_content_html(self, html_content):
         """优化文章内容中的资源标签"""
-        return re.sub(r'<img\b[^>]*>', self.optimize_image_tag, html_content, flags=re.IGNORECASE)
+        html_content = re.sub(
+            r'<p>\s*<a\b[^>]*\bhref=(["\'])(?P<href>.*?)\1[^>]*>(?P<text>.*?)</a>\s*</p>',
+            self.replace_link_only_paragraph_with_embed,
+            html_content,
+            flags=re.IGNORECASE | re.DOTALL
+        )
+        html_content = re.sub(r'<img\b[^>]*>', self.optimize_image_tag, html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<source\b[^>]*>', self.optimize_source_tag, html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<video\b[^>]*>', self.optimize_video_tag, html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<iframe\b[^>]*>', self.optimize_iframe_tag, html_content, flags=re.IGNORECASE)
+        return html_content
 
     def parse_markdown(self, filepath):
         """解析 markdown 文件，提取 frontmatter 和内容"""
