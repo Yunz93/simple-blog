@@ -1,13 +1,13 @@
 ---
 aliases: 基于Obsidian发布静态博客
 slug: obsidian-digital-garden
-category: tools
+category: Tools
 tags:
   - obsidian
 status: done
 link: https://yunz93.dev/posts/obsidian-digital-garden/
 date created: 2022-12-27 Tue 23:02:54
-date modified: "2026-04-09"
+date modified: "2026-04-10"
 is_publish: true
 title: 基于Obsidian发布静态博客
 ---
