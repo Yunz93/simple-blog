@@ -1,12 +1,12 @@
 ---
 aliases: 基于Obsidian构建个人知识库
 slug: obsidian
-category: tools
+category: Tools
 tags:
   - obsidian
   - 知识库
 status: done
-link: NA
+link: https://yunz93.dev/posts/obsidian/
 date created: 2023-01-02 Mon 19:33:43
 date modified: "2026-04-09"
 is_publish: true
