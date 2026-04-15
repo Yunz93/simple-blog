@@ -55,17 +55,6 @@
         <div class="container">
             <nav class="main-nav">
                 <a href="/" class="logo">{{ config.title }}</a>
-                <div class="nav-actions">
-                    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
-                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                    </button>
-                    <button class="menu-toggle" aria-label="菜单">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-                </div>
                 <ul class="nav-links">
                     <li><a href="/">首页</a></li>
                     <li><a href="/archives/">归档</a></li>
@@ -74,6 +63,21 @@
                     <li><a href="/about/">关于</a></li>
                     <li><a href="#" class="search-trigger">搜索</a></li>
                 </ul>
+                <div class="nav-actions">
+                    <a href="/feed.xml" class="rss-feed-link" title="RSS / Atom 订阅" aria-label="RSS 订阅">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.503 20.752c0 1.794-1.456 3.25-3.25 3.25-1.794 0-3.25-1.456-3.25-3.25 0-1.794 1.456-3.25 3.25-3.25 1.794 0 3.25 1.456 3.25 3.25zM6.503 12.035v3.128c2.94-.006 5.322 2.382 5.328 5.328h3.128c0-4.668-3.788-8.456-8.456-8.456zm0-8.456v3.128c7.3.01 13.218 5.928 13.228 13.228h3.128C22.85 11.838 15.162 3.58 6.503 3.58z"/></svg>
+                        <span class="rss-feed-text">订阅</span>
+                    </a>
+                    <button class="menu-toggle" type="button" aria-label="菜单">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <button class="theme-toggle" type="button" id="themeToggle" aria-label="切换主题">
+                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                </div>
             </nav>
         </div>
     </header>

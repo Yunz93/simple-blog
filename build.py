@@ -227,15 +227,37 @@ class BlogBuilder:
                 return datetime.strptime(f"{match.group(1)} {match.group(2)}", '%Y-%m-%d %H:%M:%S')
             return datetime.strptime(match.group(1), '%Y-%m-%d')
 
+        # Obsidian / markdown-press: "2024-03-17 Sun 15:44:48"（中间星期几因 locale 可能无法用 %a 解析）
+        obs = re.search(
+            r'(\d{4}-\d{2}-\d{2})\s+\S+\s+(\d{1,2}:\d{2}:\d{2})',
+            text,
+        )
+        if obs:
+            try:
+                return datetime.strptime(f"{obs.group(1)} {obs.group(2)}", '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                pass
+
         return None
 
-    def resolve_post_created_at(self, frontmatter):
-        """提取文章创建时间，缺失时回退到 date"""
-        created_at = self.parse_timestamp_value(frontmatter.get('date created'))
-        if created_at is not None:
-            return created_at
+    CREATED_AT_KEYS = ('create_time', 'date created', 'created_at', 'date')
+    UPDATED_AT_KEYS = ('update_time', 'date modified', 'updated_at', 'modified')
 
-        return self.parse_timestamp_value(frontmatter.get('date'))
+    def resolve_post_created_at(self, frontmatter):
+        """提取文章创建时间，兼容 create_time / date created / date 等字段"""
+        for key in self.CREATED_AT_KEYS:
+            parsed = self.parse_timestamp_value(frontmatter.get(key))
+            if parsed is not None:
+                return parsed
+        return None
+
+    def resolve_post_updated_at(self, frontmatter):
+        """提取文章更新时间"""
+        for key in self.UPDATED_AT_KEYS:
+            parsed = self.parse_timestamp_value(frontmatter.get(key))
+            if parsed is not None:
+                return parsed
+        return None
 
     def extract_search_paragraphs(self, html_content):
         """从 HTML 内容中提取带章节信息的纯文本段落"""
@@ -524,12 +546,6 @@ class BlogBuilder:
             aliases = [alias_text] if alias_text else [title]
         slug = self.resolve_frontmatter_value(frontmatter, 'slug', title)
         slug = str(slug).strip() or title
-        post_date = frontmatter.get('date')
-        parsed_post_date = self.parse_timestamp_value(post_date)
-        if parsed_post_date is not None:
-            post_date = parsed_post_date.strftime('%Y-%m-%d')
-        elif post_date is not None:
-            post_date = str(post_date).strip() or None
         category = frontmatter.get('category', '未分类')
         tags = frontmatter.get('tags', [])
         if isinstance(tags, str):
@@ -537,10 +553,16 @@ class BlogBuilder:
         description = frontmatter.get('description', '')
         draft = frontmatter.get('draft', False)
         created_at = self.resolve_post_created_at(frontmatter)
+        updated_at = self.resolve_post_updated_at(frontmatter)
 
+        # 展示用日期：优先显式 date，否则回退到创建时间
+        explicit_date = self.parse_timestamp_value(frontmatter.get('date'))
+        display_dt = explicit_date if explicit_date is not None else created_at
+        if display_dt is not None:
+            post_date = display_dt.strftime('%Y-%m-%d')
+        else:
+            post_date = None
         date_display = post_date
-        if not date_display and created_at:
-            date_display = created_at.strftime('%Y-%m-%d')
 
         post = {
             'title': title,
@@ -549,6 +571,7 @@ class BlogBuilder:
             'date': post_date,
             'date_display': date_display,
             'created_at': created_at,
+            'updated_at': updated_at,
             'category': category,
             'tags': tags,
             'description': description,
@@ -904,18 +927,26 @@ class BlogBuilder:
             f.write('\n'.join(lines))
         print("Atom feed 已生成")
 
+    @staticmethod
+    def post_archive_year(post):
+        """归档分组用年份：优先 created_at，其次 date_display / date 字符串"""
+        if post.get('created_at'):
+            return post['created_at'].year
+        for key in ('date_display', 'date'):
+            val = post.get(key)
+            if not val:
+                continue
+            try:
+                return int(str(val)[:4])
+            except (ValueError, IndexError):
+                continue
+        return None
+
     def generate_archive(self):
         """生成按年份归档页面"""
         archive = {}
         for post in self.posts:
-            year = None
-            if post.get('created_at'):
-                year = post['created_at'].year
-            elif post.get('date'):
-                try:
-                    year = int(str(post['date'])[:4])
-                except (ValueError, IndexError):
-                    pass
+            year = self.post_archive_year(post)
             if year is None:
                 year = 0
             archive.setdefault(year, []).append(post)
