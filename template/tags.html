@@ -10,7 +10,7 @@
     <div class="container">
         <div class="tags-cloud">
             {% for tag, posts in tags.items() %}
-            <a href="/tag/{{ tag | lower | replace(' ', '-') }}/" class="tag-item" data-count="{{ posts | length }}">
+            <a href="/tag/{{ tag | slugify }}/" class="tag-item" data-count="{{ posts | length }}">
                 {{ tag }}
                 <span class="tag-count">({{ posts | length }})</span>
             </a>

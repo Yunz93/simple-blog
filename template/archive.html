@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "components/page-header.html" import render as page_header %}
+
+{% block title %}归档 - {{ config.title }}{% endblock %}
+
+{% block content %}
+{{ page_header("文章归档", "共 " + total_posts | string + " 篇文章") }}
+
+<section class="content-section">
+    <div class="container">
+        <div class="archive-list">
+            {% for year, posts in archive %}
+            <div class="archive-year">
+                <h2 class="archive-year-title">{{ year if year else '未知年份' }}</h2>
+                <ul class="archive-posts">
+                    {% for post in posts %}
+                    <li class="archive-post">
+                        <time class="archive-post-date">{{ post.date_display or '' }}</time>
+                        <a href="/posts/{{ post.slug }}/" class="archive-post-title">{{ post.title }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

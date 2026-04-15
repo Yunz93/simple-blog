@@ -2,17 +2,26 @@
 
 {% block title %}{{ post.title }} - {{ config.title }}{% endblock %}
 {% block description %}{{ post.description or config.description }}{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ post.description or config.description }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_path %}/posts/{{ post.slug }}/{% endblock %}
+{% block twitter_title %}{{ post.title }}{% endblock %}
+{% block twitter_description %}{{ post.description or config.description }}{% endblock %}
 
 {% block content %}
 <article class="post-single">
     <div class="container">
         <header class="post-header">
             <div class="post-meta">
-                {% if post.date %}
-                <time class="post-date">{{ post.date }}</time>
+                {% if post.date_display %}
+                <time class="post-date">{{ post.date_display }}</time>
+                {% endif %}
+                {% if post.reading_time %}
+                <span class="reading-time">{{ post.reading_time }} 分钟阅读</span>
                 {% endif %}
                 {% if post.category %}
-                <a href="/category/{{ post.category | lower | replace(' ', '-') }}/" class="post-category">{{ post.category }}</a>
+                <a href="/category/{{ post.category | slugify }}/" class="post-category">{{ post.category }}</a>
                 {% endif %}
             </div>
             <h1 class="post-title">{{ post.title }}</h1>
@@ -22,17 +31,44 @@
             {% if post.tags %}
             <div class="post-tags">
                 {% for tag in post.tags %}
-                <a href="/tag/{{ tag | lower | replace(' ', '-') }}/" class="tag">#{{ tag }}</a>
+                <a href="/tag/{{ tag | slugify }}/" class="tag">#{{ tag }}</a>
                 {% endfor %}
             </div>
             {% endif %}
         </header>
+
+        {% if post.toc %}
+        <nav class="post-toc" aria-label="文章目录">
+            <details open>
+                <summary>目录</summary>
+                {{ post.toc | safe }}
+            </details>
+        </nav>
+        {% endif %}
         
         <div class="post-content markdown-body">
             {{ post.content | safe }}
         </div>
         
         <footer class="post-footer">
+            <nav class="post-nav" aria-label="文章导航">
+                {% if next_post %}
+                <a href="/posts/{{ next_post.slug }}/" class="post-nav-link post-nav-prev">
+                    <span class="post-nav-label">&larr; 上一篇</span>
+                    <span class="post-nav-title">{{ next_post.title }}</span>
+                </a>
+                {% else %}
+                <span class="post-nav-link post-nav-placeholder"></span>
+                {% endif %}
+                {% if prev_post %}
+                <a href="/posts/{{ prev_post.slug }}/" class="post-nav-link post-nav-next">
+                    <span class="post-nav-label">下一篇 &rarr;</span>
+                    <span class="post-nav-title">{{ prev_post.title }}</span>
+                </a>
+                {% else %}
+                <span class="post-nav-link post-nav-placeholder"></span>
+                {% endif %}
+            </nav>
             <a href="/" class="back-link">&larr; 返回首页</a>
         </footer>
         

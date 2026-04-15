@@ -16,18 +16,6 @@ function debounce(func, wait) {
     };
 }
 
-// 节流函数 - 性能优化
-function throttle(func, limit) {
-    let inThrottle;
-    return function executedFunction(...args) {
-        if (!inThrottle) {
-            func(...args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
 // 图片懒加载 - 性能优化
 class LazyLoadImages {
     constructor() {
@@ -461,6 +449,39 @@ class SmoothScroll {
     }
 }
 
+// 主题切换
+class ThemeToggle {
+    constructor() {
+        this.btn = document.getElementById('themeToggle');
+        this.init();
+    }
+
+    getSystemTheme() {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    getEffectiveTheme() {
+        return localStorage.getItem('theme') || this.getSystemTheme();
+    }
+
+    apply(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+
+    init() {
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+
+        this.btn?.addEventListener('click', () => {
+            const next = this.getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+            this.apply(next);
+        });
+    }
+}
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     new Search();
@@ -468,4 +489,5 @@ document.addEventListener('DOMContentLoaded', () => {
     new CodeCopy();
     new SmoothScroll();
     new LazyLoadImages();
+    new ThemeToggle();
 });

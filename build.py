@@ -27,7 +27,6 @@ TEMPLATE_DIR = "template"
 STATIC_DIR = "static"
 DIST_DIR = "dist"
 
-import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -120,6 +119,7 @@ class BlogBuilder:
         ])
         self.env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
         self.env.globals['build_version'] = self.build_version
+        self.env.filters['slugify'] = self.slugify
         self.posts = []
         self.categories = {}
         self.tags = {}
@@ -492,13 +492,20 @@ class BlogBuilder:
                 try:
                     frontmatter = yaml.safe_load(parts[1]) or {}
                     body = parts[2].strip()
-                except yaml.YAMLError:
-                    pass
+                except yaml.YAMLError as e:
+                    print(f"警告: YAML frontmatter 解析失败 ({filepath}): {e}")
         
         # 渲染 markdown
         html_content = self.md.convert(body)
+        toc_html = getattr(self.md, 'toc', '')
         self.md.reset()
         html_content = self.optimize_content_html(html_content)
+
+        # 阅读时间估算：中文约 400 字/分钟
+        plain_text = re.sub(r'<[^>]+>', '', html_content)
+        plain_text = html.unescape(plain_text)
+        char_count = len(re.sub(r'\s+', '', plain_text))
+        reading_minutes = max(1, round(char_count / 400))
         
         # 提取元数据
         filename = os.path.basename(filepath)
@@ -531,16 +538,23 @@ class BlogBuilder:
         draft = frontmatter.get('draft', False)
         created_at = self.resolve_post_created_at(frontmatter)
 
+        date_display = post_date
+        if not date_display and created_at:
+            date_display = created_at.strftime('%Y-%m-%d')
+
         post = {
             'title': title,
             'aliases': aliases,
             'slug': slug,
             'date': post_date,
+            'date_display': date_display,
             'created_at': created_at,
             'category': category,
             'tags': tags,
             'description': description,
             'content': html_content,
+            'toc': toc_html,
+            'reading_time': reading_minutes,
             'search_entries': self.extract_search_paragraphs(html_content),
             'search_paragraphs': [],
             'draft': draft,
@@ -712,11 +726,15 @@ class BlogBuilder:
     
     def generate_posts(self):
         """生成文章页面"""
-        for post in self.posts:
+        for i, post in enumerate(self.posts):
+            prev_post = self.posts[i - 1] if i > 0 else None
+            next_post = self.posts[i + 1] if i < len(self.posts) - 1 else None
             output_path = f"posts/{post['slug']}/index.html"
             self.render_template('post.html', {
                 'config': self.config,
                 'post': post,
+                'prev_post': prev_post,
+                'next_post': next_post,
                 'categories': self.categories,
                 'tags': self.tags
             }, output_path)
@@ -787,6 +805,152 @@ class BlogBuilder:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(search_data, f, ensure_ascii=False, indent=2)
         print("搜索数据已生成")
+
+    def generate_sitemap(self):
+        """生成 sitemap.xml"""
+        base_url = self.config.get('url', '').rstrip('/')
+        now = datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%S+00:00')
+
+        urls = [{'loc': f'{base_url}/', 'lastmod': now, 'priority': '1.0'}]
+
+        for post in self.posts:
+            lastmod = now
+            if post.get('created_at'):
+                lastmod = post['created_at'].strftime('%Y-%m-%dT%H:%M:%S+00:00')
+            urls.append({
+                'loc': f"{base_url}/posts/{post['slug']}/",
+                'lastmod': lastmod,
+                'priority': '0.8'
+            })
+
+        for category in self.categories:
+            slug = self.slugify(category)
+            urls.append({'loc': f'{base_url}/category/{slug}/', 'lastmod': now, 'priority': '0.5'})
+
+        for tag in self.tags:
+            slug = self.slugify(tag)
+            urls.append({'loc': f'{base_url}/tag/{slug}/', 'lastmod': now, 'priority': '0.4'})
+
+        urls.append({'loc': f'{base_url}/categories/', 'lastmod': now, 'priority': '0.5'})
+        urls.append({'loc': f'{base_url}/tags/', 'lastmod': now, 'priority': '0.4'})
+        urls.append({'loc': f'{base_url}/archives/', 'lastmod': now, 'priority': '0.5'})
+
+        lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+        lines.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+        for url in urls:
+            lines.append('  <url>')
+            lines.append(f'    <loc>{html.escape(url["loc"])}</loc>')
+            lines.append(f'    <lastmod>{url["lastmod"]}</lastmod>')
+            lines.append(f'    <priority>{url["priority"]}</priority>')
+            lines.append('  </url>')
+        lines.append('</urlset>')
+
+        output_path = os.path.join(DIST_DIR, 'sitemap.xml')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+        print("sitemap.xml 已生成")
+
+    def generate_robots_txt(self):
+        """生成 robots.txt"""
+        base_url = self.config.get('url', '').rstrip('/')
+        content = f"User-agent: *\nAllow: /\n\nSitemap: {base_url}/sitemap.xml\n"
+
+        output_path = os.path.join(DIST_DIR, 'robots.txt')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("robots.txt 已生成")
+
+    def generate_rss_feed(self):
+        """生成 Atom feed"""
+        base_url = self.config.get('url', '').rstrip('/')
+        title = self.config.get('title', 'Blog')
+        description = self.config.get('description', '')
+        author = self.config.get('author', '')
+        now = datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+        lines.append('<feed xmlns="http://www.w3.org/2005/Atom">')
+        lines.append(f'  <title>{html.escape(title)}</title>')
+        lines.append(f'  <subtitle>{html.escape(description)}</subtitle>')
+        lines.append(f'  <link href="{html.escape(base_url)}/feed.xml" rel="self" type="application/atom+xml"/>')
+        lines.append(f'  <link href="{html.escape(base_url)}/" rel="alternate" type="text/html"/>')
+        lines.append(f'  <id>{html.escape(base_url)}/</id>')
+        lines.append(f'  <updated>{now}</updated>')
+        if author:
+            lines.append(f'  <author><name>{html.escape(author)}</name></author>')
+
+        for post in self.posts[:20]:
+            post_url = f"{base_url}/posts/{post['slug']}/"
+            updated = now
+            if post.get('created_at'):
+                updated = post['created_at'].strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            lines.append('  <entry>')
+            lines.append(f'    <title>{html.escape(post["title"])}</title>')
+            lines.append(f'    <link href="{html.escape(post_url)}" rel="alternate" type="text/html"/>')
+            lines.append(f'    <id>{html.escape(post_url)}</id>')
+            lines.append(f'    <updated>{updated}</updated>')
+            if post.get('description'):
+                lines.append(f'    <summary>{html.escape(post["description"])}</summary>')
+            lines.append(f'    <content type="html">{html.escape(post["content"])}</content>')
+            for tag in post.get('tags', []):
+                lines.append(f'    <category term="{html.escape(tag)}"/>')
+            lines.append('  </entry>')
+
+        lines.append('</feed>')
+
+        output_path = os.path.join(DIST_DIR, 'feed.xml')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+        print("Atom feed 已生成")
+
+    def generate_archive(self):
+        """生成按年份归档页面"""
+        archive = {}
+        for post in self.posts:
+            year = None
+            if post.get('created_at'):
+                year = post['created_at'].year
+            elif post.get('date'):
+                try:
+                    year = int(str(post['date'])[:4])
+                except (ValueError, IndexError):
+                    pass
+            if year is None:
+                year = 0
+            archive.setdefault(year, []).append(post)
+
+        sorted_years = sorted(archive.keys(), reverse=True)
+        archive_sorted = [(y, archive[y]) for y in sorted_years]
+
+        self.render_template('archive.html', {
+            'config': self.config,
+            'archive': archive_sorted,
+            'total_posts': len(self.posts),
+        }, 'archives/index.html')
+        print("归档页面已生成")
+
+    def generate_about(self):
+        """生成关于页面"""
+        about_content = ''
+        about_md = Path('about.md')
+        if about_md.exists():
+            with open(about_md, 'r', encoding='utf-8') as f:
+                about_content = self.md.convert(f.read())
+                self.md.reset()
+
+        self.render_template('about.html', {
+            'config': self.config,
+            'about_content': about_content,
+        }, 'about/index.html')
+        print("关于页面已生成")
+
+    def generate_404(self):
+        """生成 404 页面"""
+        self.render_template('404.html', {
+            'config': self.config,
+        }, '404.html')
+        print("404 页面已生成")
     
     def slugify(self, text):
         """将文本转换为 URL slug"""
@@ -809,6 +973,12 @@ class BlogBuilder:
         self.generate_categories()
         self.generate_tags()
         self.generate_search_data()
+        self.generate_sitemap()
+        self.generate_robots_txt()
+        self.generate_rss_feed()
+        self.generate_archive()
+        self.generate_about()
+        self.generate_404()
         
         print("=" * 50)
         print(f"构建完成！输出目录: {DIST_DIR}")

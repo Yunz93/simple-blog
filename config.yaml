@@ -2,7 +2,7 @@
 title: "BxYZ Blog"
 description: "爱吾所爱，一生自在"
 author: "BXYZ"
-url: "https://example.com"
+url: "https://bxyz.blog"  # TODO: 替换为实际部署域名
 posts_per_page: 10
 
 # 文章源目录配置（对接 markdown-press）
