@@ -6,8 +6,9 @@ status: done
 slug: markdown-press
 aliases: M记
 is_publish: true
-create_time: "2026-04-09"
-update_time: "2026-04-14 23:13:31"
+date created: "2026-04-09"
+date modified: "2026-04-15 08:33:00"
+link: https://yunz93.dev/posts/markdown-press/
 title: M 記
 ---
 
