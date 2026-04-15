@@ -7,14 +7,14 @@ slug: markdown-press
 aliases: M记
 is_publish: true
 date created: "2026-04-09"
-date modified: "2026-04-15 08:33:00"
-link: https://yunz93.dev/posts/markdown-press/
+date modified: "2026-04-15 09:24:54"
+link: https://www.yunz93.dev/posts/markdown-press/
 title: M 記
 ---
 
 # M 記
 
-![M 記-1776170252301.png](https://raw.githubusercontent.com/Yunz93/bxyz-blog/main/resource/M-4dd9e/01-M-1776170252301.png)
+![M 記-1776170252301](https://raw.githubusercontent.com/Yunz93/PicRepo/main/image/M 記-1776170252301.png)
 
 项目地址：[M 記](https://github.com/Yunz93/markdown-press)
 
@@ -57,7 +57,7 @@ title: M 記
 - 多 tab 文件切换
 - 附件一键清理，附件移动自动更新关联文章的链接
 
-> 实时编辑预览的功能未实现，尝试了几次，稳定性太差，先不考虑了。
+> 实时编辑预览的功能未实现，尝试了几次，问题层出不穷，先不考虑了。
 
 ## 快捷键说明
 
