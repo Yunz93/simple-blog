@@ -30,6 +30,23 @@ DIST_DIR = "dist"
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+def _xml_10_safe_text(s: str) -> str:
+    """Remove code points illegal in XML 1.0 text."""
+    if not s:
+        return s or ''
+    out = []
+    for ch in s:
+        o = ord(ch)
+        if o < 0x20 and o not in (0x9, 0xA, 0xD):
+            continue
+        if 0xD800 <= o <= 0xDFFF:
+            continue
+        if o in (0xFFFE, 0xFFFF):
+            continue
+        out.append(ch)
+    return ''.join(out)
+
+
 class SearchContentParser(HTMLParser):
     """提取段落及其所属章节，供搜索结果预览和跳转使用"""
 
@@ -891,16 +908,19 @@ class BlogBuilder:
         author = self.config.get('author', '')
         now = datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
+        def atom_txt(s: str) -> str:
+            return html.escape(_xml_10_safe_text(s))
+
         lines = ['<?xml version="1.0" encoding="UTF-8"?>']
         lines.append('<feed xmlns="http://www.w3.org/2005/Atom">')
-        lines.append(f'  <title>{html.escape(title)}</title>')
-        lines.append(f'  <subtitle>{html.escape(description)}</subtitle>')
-        lines.append(f'  <link href="{html.escape(base_url)}/feed.xml" rel="self" type="application/atom+xml"/>')
-        lines.append(f'  <link href="{html.escape(base_url)}/" rel="alternate" type="text/html"/>')
-        lines.append(f'  <id>{html.escape(base_url)}/</id>')
+        lines.append(f'  <title>{atom_txt(title)}</title>')
+        lines.append(f'  <subtitle>{atom_txt(description)}</subtitle>')
+        lines.append(f'  <link href="{atom_txt(base_url)}/feed.xml" rel="self" type="application/atom+xml"/>')
+        lines.append(f'  <link href="{atom_txt(base_url)}/" rel="alternate" type="text/html"/>')
+        lines.append(f'  <id>{atom_txt(base_url)}/</id>')
         lines.append(f'  <updated>{now}</updated>')
         if author:
-            lines.append(f'  <author><name>{html.escape(author)}</name></author>')
+            lines.append(f'  <author><name>{atom_txt(author)}</name></author>')
 
         for post in self.posts[:20]:
             post_url = f"{base_url}/posts/{post['slug']}/"
@@ -909,15 +929,15 @@ class BlogBuilder:
                 updated = post['created_at'].strftime('%Y-%m-%dT%H:%M:%SZ')
 
             lines.append('  <entry>')
-            lines.append(f'    <title>{html.escape(post["title"])}</title>')
-            lines.append(f'    <link href="{html.escape(post_url)}" rel="alternate" type="text/html"/>')
-            lines.append(f'    <id>{html.escape(post_url)}</id>')
+            lines.append(f'    <title>{atom_txt(post["title"])}</title>')
+            lines.append(f'    <link href="{atom_txt(post_url)}" rel="alternate" type="text/html"/>')
+            lines.append(f'    <id>{atom_txt(post_url)}</id>')
             lines.append(f'    <updated>{updated}</updated>')
             if post.get('description'):
-                lines.append(f'    <summary>{html.escape(post["description"])}</summary>')
-            lines.append(f'    <content type="html">{html.escape(post["content"])}</content>')
+                lines.append(f'    <summary>{atom_txt(post["description"])}</summary>')
+            lines.append(f'    <content type="html">{atom_txt(post["content"])}</content>')
             for tag in post.get('tags', []):
-                lines.append(f'    <category term="{html.escape(tag)}"/>')
+                lines.append(f'    <category term="{atom_txt(tag)}"/>')
             lines.append('  </entry>')
 
         lines.append('</feed>')
