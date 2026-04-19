@@ -31,7 +31,11 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _xml_10_safe_text(s: str) -> str:
-    """Remove code points illegal in XML 1.0 text."""
+    """Remove code points illegal in XML 1.0 text (html.escape does not handle these).
+
+    Browsers report errors like "PCDATA invalid Char value 8" when markdown or
+    front matter contains control characters such as backspace (U+0008).
+    """
     if not s:
         return s or ''
     out = []
