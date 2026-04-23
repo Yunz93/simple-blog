@@ -61,11 +61,12 @@ class Search {
         
         this.data = [];
         this.isSearchDataLoaded = false;
+        this.isLoading = false;
         this.loadError = null;
         this.init();
     }
     
-    async init() {
+    init() {
         // 绑定事件
         this.trigger?.addEventListener('click', (e) => {
             e.preventDefault();
@@ -100,7 +101,6 @@ class Search {
             }
         });
 
-        await this.loadSearchData();
     }
 
     getSearchDataUrl() {
@@ -112,6 +112,11 @@ class Search {
     }
 
     async loadSearchData() {
+        if (this.isSearchDataLoaded || this.isLoading) {
+            return;
+        }
+
+        this.isLoading = true;
         try {
             const response = await fetch(this.getSearchDataUrl(), {
                 cache: 'no-store'
@@ -130,17 +135,23 @@ class Search {
             this.loadError = e;
             this.isSearchDataLoaded = false;
             console.error('加载搜索数据失败:', e);
+        } finally {
+            this.isLoading = false;
         }
     }
     
     open() {
         this.modal?.classList.add('active');
         this.input?.focus();
-        this.input.value = '';
-        this.results.innerHTML = '';
+        if (!this.input.value.trim()) {
+            this.results.innerHTML = '';
+        }
 
         if (!this.isSearchDataLoaded && !this.loadError) {
             this.results.innerHTML = '<div class="search-result-item"><div class="search-result-meta">搜索索引加载中...</div></div>';
+            this.loadSearchData();
+        } else if (this.input.value.trim()) {
+            this.search(this.input.value);
         }
     }
     
@@ -384,37 +395,20 @@ class CodeCopy {
         document.querySelectorAll('pre').forEach(pre => {
             const button = document.createElement('button');
             button.className = 'copy-button';
+            button.type = 'button';
             button.textContent = '复制';
-            button.style.cssText = `
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                padding: 4px 12px;
-                font-size: 12px;
-                background: rgba(255,255,255,0.1);
-                border: 1px solid rgba(255,255,255,0.2);
-                border-radius: 4px;
-                color: #e2e8f0;
-                cursor: pointer;
-                opacity: 0;
-                transition: opacity 0.2s ease;
-            `;
-            
-            pre.style.position = 'relative';
+            pre.classList.add('code-block');
             pre.appendChild(button);
-            
-            pre.addEventListener('mouseenter', () => button.style.opacity = '1');
-            pre.addEventListener('mouseleave', () => button.style.opacity = '0');
-            
+
             button.addEventListener('click', async () => {
                 const code = pre.querySelector('code')?.textContent || pre.textContent;
                 try {
                     await navigator.clipboard.writeText(code);
                     button.textContent = '已复制!';
-                    button.style.background = 'rgba(74, 222, 128, 0.2)';
+                    button.classList.add('copied');
                     setTimeout(() => {
                         button.textContent = '复制';
-                        button.style.background = 'rgba(255,255,255,0.1)';
+                        button.classList.remove('copied');
                     }, 2000);
                 } catch (e) {
                     console.error('复制失败:', e);

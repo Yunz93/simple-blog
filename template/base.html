@@ -16,6 +16,7 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{% block twitter_title %}{{ config.title }}{% endblock %}">
     <meta name="twitter:description" content="{% block twitter_description %}{{ config.description }}{% endblock %}">
+    <link rel="canonical" href="{{ config.url }}{{ canonical_path | default('/') }}">
 
     <!-- 安全相关 Meta 标签 (其他安全头由服务器通过 HTTP Header 设置) -->
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -95,7 +96,7 @@
     <!-- 搜索弹窗 -->
     <div class="search-modal" id="searchModal">
         <div class="search-container">
-            <input type="text" class="search-input" placeholder="搜索文章..." id="searchInput">
+            <input type="text" class="search-input" placeholder="搜索文章..." id="searchInput" aria-label="搜索文章">
             <button class="search-close" id="searchClose">&times;</button>
             <div class="search-results" id="searchResults"></div>
         </div>
