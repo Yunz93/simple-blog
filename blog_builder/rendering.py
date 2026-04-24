@@ -180,7 +180,6 @@ def generate_search_data(dist_dir, posts):
                 "aliases": post.get("aliases", []),
                 "slug": post["slug"],
                 "description": post["description"],
-                "search_paragraphs": post.get("search_paragraphs", []),
                 "search_entries": post.get("search_entries", []),
                 "category": post["category"],
                 "tags": post["tags"],
@@ -189,7 +188,10 @@ def generate_search_data(dist_dir, posts):
         )
 
     output_path = Path(dist_dir) / "search.json"
-    output_path.write_text(json.dumps(search_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path.write_text(
+        json.dumps(search_data, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
     print("搜索数据已生成")
 
 

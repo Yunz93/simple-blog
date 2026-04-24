@@ -9,7 +9,7 @@ from pathlib import Path
 
 import markdown
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .assets import copy_static
 from .constants import CONFIG_FILE, DIST_DIR, POSTS_DIR, STATIC_DIR, TEMPLATE_DIR
@@ -36,7 +36,10 @@ class BlogBuilder:
         self.build_version = self.resolve_build_version()
         self.processor = ContentProcessor()
         self.about_md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "meta"])
-        self.env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+        self.env = Environment(
+            loader=FileSystemLoader(TEMPLATE_DIR),
+            autoescape=select_autoescape(enabled_extensions=("html", "xml"), default_for_string=True),
+        )
         self.env.globals["build_version"] = self.build_version
         self.env.filters["slugify"] = slugify
         self.posts = []

@@ -119,7 +119,7 @@ class Search {
         this.isLoading = true;
         try {
             const response = await fetch(this.getSearchDataUrl(), {
-                cache: 'no-store'
+                cache: 'force-cache'
             });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
