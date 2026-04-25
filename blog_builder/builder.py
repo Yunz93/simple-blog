@@ -60,6 +60,32 @@ class BlogBuilder:
 
         return current_name
 
+    @staticmethod
+    def normalized_group_name(name):
+        """Normalize group names for safe case-insensitive deduping."""
+        return str(name).strip().casefold()
+
+    @classmethod
+    def resolve_group_name(cls, names_by_slug, group_name, group_type):
+        """Return slug metadata for safe case-insensitive deduping."""
+        slug = slugify(group_name) or group_name
+        normalized_name = cls.normalized_group_name(group_name)
+        existing = names_by_slug.get(slug)
+        if existing is None:
+            names_by_slug[slug] = (normalized_name, group_name)
+            return slug, None, group_name
+
+        existing_normalized, existing_display = existing
+        if existing_normalized != normalized_name:
+            raise ValueError(
+                f"{group_type} slug冲突: {existing_display!r} 与 {group_name!r} 都映射到 {slug!r}"
+            )
+
+        preferred_name = cls.prefer_display_name(existing_display, group_name)
+        if preferred_name != existing_display:
+            names_by_slug[slug] = (existing_normalized, preferred_name)
+        return slug, existing_display, preferred_name
+
     def group_categories(self):
         """Group posts by category slug so casing changes do not create duplicates."""
         grouped_categories = {}
@@ -67,17 +93,11 @@ class BlogBuilder:
 
         for post in self.posts:
             category_name = str(post.get("category") or "未分类").strip() or "未分类"
-            category_slug = slugify(category_name) or category_name
-            canonical_name = category_names_by_slug.get(category_slug)
-            if canonical_name is None:
-                canonical_name = category_name
-                category_names_by_slug[category_slug] = canonical_name
-            else:
-                preferred_name = self.prefer_display_name(canonical_name, category_name)
-                if preferred_name != canonical_name:
-                    grouped_categories[preferred_name] = grouped_categories.pop(canonical_name)
-                    category_names_by_slug[category_slug] = preferred_name
-                    canonical_name = preferred_name
+            _, previous_name, canonical_name = self.resolve_group_name(
+                category_names_by_slug, category_name, "分类"
+            )
+            if previous_name and previous_name != canonical_name and previous_name in grouped_categories:
+                grouped_categories[canonical_name] = grouped_categories.pop(previous_name)
             grouped_categories.setdefault(canonical_name, []).append(post)
 
         return grouped_categories
@@ -92,8 +112,11 @@ class BlogBuilder:
                 tag_name = str(raw_tag).strip()
                 if not tag_name:
                     continue
-                tag_slug = slugify(tag_name) or tag_name
-                canonical_name = tag_names_by_slug.setdefault(tag_slug, tag_name)
+                _, previous_name, canonical_name = self.resolve_group_name(
+                    tag_names_by_slug, tag_name, "标签"
+                )
+                if previous_name and previous_name != canonical_name and previous_name in grouped_tags:
+                    grouped_tags[canonical_name] = grouped_tags.pop(previous_name)
                 grouped_tags.setdefault(canonical_name, []).append(post)
 
         return grouped_tags

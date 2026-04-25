@@ -18,69 +18,71 @@ else:
 
 @unittest.skipIf(BlogBuilder is None, "build dependencies are not installed")
 class BuildSmokeTests(unittest.TestCase):
-    def test_builder_generates_core_outputs(self):
+    def create_temp_blog_root(self):
         repo_root = Path(__file__).resolve().parents[1]
+        temp_dir = tempfile.TemporaryDirectory()
+        temp_root = Path(temp_dir.name)
+        shutil.copytree(repo_root / "template", temp_root / "template")
+        shutil.copytree(repo_root / "static", temp_root / "static")
+        shutil.copytree(repo_root / "blog_builder", temp_root / "blog_builder")
+        shutil.copy2(repo_root / "build.py", temp_root / "build.py")
+        (temp_root / "config.yaml").write_text(
+            textwrap.dedent(
+                """\
+                title: "Tmp Blog"
+                description: "Smoke test"
+                author: "Tester"
+                url: "https://example.com"
+                posts_per_page: 10
+                posts_source: "posts"
+                footer: "Footer"
+                """
+            ),
+            encoding="utf-8",
+        )
+        (temp_root / "posts").mkdir()
+        return temp_dir, temp_root
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            temp_root = Path(tmp_dir)
-            shutil.copytree(repo_root / "template", temp_root / "template")
-            shutil.copytree(repo_root / "static", temp_root / "static")
-            shutil.copytree(repo_root / "blog_builder", temp_root / "blog_builder")
-            shutil.copy2(repo_root / "build.py", temp_root / "build.py")
+    def test_builder_generates_core_outputs(self):
+        temp_dir, temp_root = self.create_temp_blog_root()
+        self.addCleanup(temp_dir.cleanup)
+        posts_dir = temp_root / "posts"
+        (posts_dir / "sample.md").write_text(
+            textwrap.dedent(
+                """\
+                ---
+                title: Smoke Title
+                date: 2024-03-20
+                category: 测试
+                tags: [冒烟]
+                description: Smoke Description
+                ---
 
-            (temp_root / "config.yaml").write_text(
-                textwrap.dedent(
-                    """\
-                    title: "Tmp Blog"
-                    description: "Smoke test"
-                    author: "Tester"
-                    url: "https://example.com"
-                    posts_per_page: 10
-                    posts_source: "posts"
-                    footer: "Footer"
-                    """
-                ),
-                encoding="utf-8",
-            )
+                ## Intro
 
-            posts_dir = temp_root / "posts"
-            posts_dir.mkdir()
-            (posts_dir / "sample.md").write_text(
-                textwrap.dedent(
-                    """\
-                    ---
-                    title: Smoke Title
-                    date: 2024-03-20
-                    category: 测试
-                    tags: [冒烟]
-                    description: Smoke Description
-                    ---
+                Smoke body.
+                """
+            ),
+            encoding="utf-8",
+        )
 
-                    ## Intro
+        cwd = os.getcwd()
+        try:
+            os.chdir(temp_root)
+            builder = BlogBuilder()
+            builder.build()
+        finally:
+            os.chdir(cwd)
 
-                    Smoke body.
-                    """
-                ),
-                encoding="utf-8",
-            )
+        dist_dir = temp_root / "dist"
+        self.assertTrue((dist_dir / "index.html").exists())
+        self.assertTrue((dist_dir / "search.json").exists())
+        self.assertTrue((dist_dir / "feed.xml").exists())
+        self.assertTrue((dist_dir / "sitemap.xml").exists())
+        self.assertTrue((dist_dir / "posts" / "smoke-title" / "index.html").exists())
 
-            cwd = os.getcwd()
-            try:
-                os.chdir(temp_root)
-                builder = BlogBuilder()
-                builder.build()
-            finally:
-                os.chdir(cwd)
-
-            dist_dir = temp_root / "dist"
-            self.assertTrue((dist_dir / "index.html").exists())
-            self.assertTrue((dist_dir / "search.json").exists())
-            self.assertTrue((dist_dir / "feed.xml").exists())
-            self.assertTrue((dist_dir / "sitemap.xml").exists())
-            self.assertTrue((dist_dir / "posts" / "smoke-title" / "index.html").exists())
-
-            search_payload = json.loads((dist_dir / "search.json").read_text(encoding="utf-8"))
-            self.assertEqual(search_payload[0]["slug"], "smoke-title")
+        search_payload = json.loads((dist_dir / "search.json").read_text(encoding="utf-8"))
+        self.assertEqual(search_payload[0]["slug"], "smoke-title")
 
     def test_builder_merges_categories_with_same_slug(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -195,3 +197,95 @@ class BuildSmokeTests(unittest.TestCase):
 
             self.assertFalse((dist_dir / "category" / "old-category").exists())
             self.assertTrue((dist_dir / "category" / "new-category" / "index.html").exists())
+
+    def test_builder_rejects_ambiguous_category_slug_collisions(self):
+        temp_dir, temp_root = self.create_temp_blog_root()
+        self.addCleanup(temp_dir.cleanup)
+        posts_dir = temp_root / "posts"
+        (posts_dir / "c.md").write_text(
+            textwrap.dedent(
+                """\
+                ---
+                title: Category C
+                date: 2024-03-20
+                category: C
+                tags: [冒烟]
+                description: Smoke Description
+                ---
+
+                Body.
+                """
+            ),
+            encoding="utf-8",
+        )
+        (posts_dir / "cpp.md").write_text(
+            textwrap.dedent(
+                """\
+                ---
+                title: Category C++
+                date: 2024-03-21
+                category: C++
+                tags: [冒烟]
+                description: Smoke Description
+                ---
+
+                Body.
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(temp_root)
+            builder = BlogBuilder()
+            with self.assertRaisesRegex(ValueError, "分类 slug冲突"):
+                builder.load_posts()
+        finally:
+            os.chdir(cwd)
+
+    def test_builder_rejects_ambiguous_tag_slug_collisions(self):
+        temp_dir, temp_root = self.create_temp_blog_root()
+        self.addCleanup(temp_dir.cleanup)
+        posts_dir = temp_root / "posts"
+        (posts_dir / "c.md").write_text(
+            textwrap.dedent(
+                """\
+                ---
+                title: Tag C
+                date: 2024-03-20
+                category: 测试
+                tags: [C]
+                description: Smoke Description
+                ---
+
+                Body.
+                """
+            ),
+            encoding="utf-8",
+        )
+        (posts_dir / "cpp.md").write_text(
+            textwrap.dedent(
+                """\
+                ---
+                title: Tag C++
+                date: 2024-03-21
+                category: 测试
+                tags: [C++]
+                description: Smoke Description
+                ---
+
+                Body.
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(temp_root)
+            builder = BlogBuilder()
+            with self.assertRaisesRegex(ValueError, "标签 slug冲突"):
+                builder.load_posts()
+        finally:
+            os.chdir(cwd)
