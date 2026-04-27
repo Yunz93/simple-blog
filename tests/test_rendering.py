@@ -66,14 +66,12 @@ class RenderingSafetyTests(unittest.TestCase):
         self.addCleanup(temp_dir.cleanup)
 
         index_html = (temp_root / "dist" / "index.html").read_text(encoding="utf-8")
-        post_html = (temp_root / "dist" / "posts" / "emunsafe-titleem" / "index.html").read_text(
-            encoding="utf-8"
-        )
+        post_html = (temp_root / "dist" / "posts" / "emunsafe-titleem" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("&lt;script&gt;alert", index_html)
         self.assertNotIn("<script>alert('cfg')</script>", index_html)
         self.assertIn("&lt;em&gt;Unsafe Title&lt;/em&gt;", post_html)
-        self.assertNotIn('<h1 class="post-title"><em>Unsafe Title</em></h1>', post_html)
+        self.assertNotIn("<h1 class=\"post-title\"><em>Unsafe Title</em></h1>", post_html)
         self.assertIn("&lt;img src=x onerror=alert", post_html)
         self.assertIn('<div class="custom-html">Inline HTML</div>', post_html)
 
