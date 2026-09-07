@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import tempfile
 import textwrap
@@ -74,6 +75,42 @@ class RenderingSafetyTests(unittest.TestCase):
         self.assertNotIn("<h1 class=\"post-title\"><em>Unsafe Title</em></h1>", post_html)
         self.assertIn("&lt;img src=x onerror=alert", post_html)
         self.assertIn('<div class="custom-html">Inline HTML</div>', post_html)
+
+    def test_post_page_renders_title_once_when_markdown_repeats_h1(self):
+        temp_dir, temp_root = self.build_temp_site(
+            """\
+            title: "Tmp Blog"
+            description: "Title duplicate test"
+            author: "Tester"
+            url: "https://example.com"
+            posts_per_page: 10
+            posts_source: "posts"
+            footer: "Footer"
+            """,
+            """\
+            ---
+            title: Duplicate Title
+            date: 2024-03-20
+            category: 测试
+            tags: [标题]
+            description: Summary
+            ---
+
+            # Duplicate Title
+
+            ## Intro
+
+            Body copy.
+            """,
+        )
+        self.addCleanup(temp_dir.cleanup)
+
+        post_html = (temp_root / "dist" / "posts" / "duplicate-title" / "index.html").read_text(encoding="utf-8")
+        heading_matches = re.findall(r"<h1[^>]*>Duplicate Title</h1>", post_html)
+
+        self.assertEqual(heading_matches, ['<h1 class="post-title">Duplicate Title</h1>'])
+        self.assertIn('<h1 class="post-title">Duplicate Title</h1>', post_html)
+        self.assertIn("Body copy.", post_html)
 
     def test_search_payload_uses_compact_entries_only(self):
         temp_dir, temp_root = self.build_temp_site(
