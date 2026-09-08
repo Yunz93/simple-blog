@@ -102,6 +102,34 @@ class ContentProcessor:
             return tag
         return re.sub(r"\s*/?>$", f" {name}\\g<0>", tag)
 
+    def apply_obsidian_image_size(self, tag):
+        """Honor Obsidian `![alt|300]` / `![alt|300x200]` display sizes."""
+        alt_match = re.search(r'\balt=(["\'])(.*?)\1', tag, flags=re.IGNORECASE | re.DOTALL)
+        if not alt_match:
+            return tag
+
+        alt = html.unescape(alt_match.group(2))
+        size_match = re.search(r"\|(\d+)(?:x(\d+))?\s*$", alt)
+        if not size_match:
+            return tag
+
+        width = int(size_match.group(1))
+        height = int(size_match.group(2)) if size_match.group(2) else None
+        if width < 1 or width > 4096:
+            return tag
+        if height is not None and (height < 1 or height > 4096):
+            return tag
+
+        cleaned_alt = html.escape(alt[: size_match.start()].rstrip(), quote=True)
+        tag = f"{tag[:alt_match.start(2)]}{cleaned_alt}{tag[alt_match.end(2):]}"
+        tag = self.ensure_tag_attribute(tag, "width", str(width))
+        if height is not None:
+            tag = self.ensure_tag_attribute(tag, "height", str(height))
+            style = f"width: {width}px; height: {height}px; max-width: 100%;"
+        else:
+            style = f"width: {width}px; max-width: 100%; height: auto;"
+        return self.ensure_tag_attribute(tag, "style", style)
+
     def optimize_image_tag(self, match):
         tag = match.group(0)
         src_match = re.search(r'\bsrc=(["\'])(.*?)\1', tag, flags=re.IGNORECASE)
@@ -113,6 +141,7 @@ class ContentProcessor:
                 escaped_src = html.escape(normalized_src, quote=True)
                 tag = f"{tag[:src_match.start(2)]}{escaped_src}{tag[src_match.end(2):]}"
 
+        tag = self.apply_obsidian_image_size(tag)
         tag = self.ensure_tag_attribute(tag, "loading", "lazy")
         tag = self.ensure_tag_attribute(tag, "decoding", "async")
         return tag
@@ -255,6 +284,45 @@ class ContentProcessor:
                 return body[match.end() :].lstrip("\n")
         return body
 
+    LIST_ITEM_RE = re.compile(r"^[ \t]{0,3}(?:[-*+]|\d{1,9}[.)])[ \t]")
+    FENCE_OPEN_RE = re.compile(r"^([ \t]{0,3})(`{3,}|~{3,})")
+
+    def ensure_blank_line_before_lists(self, body):
+        """Let lists interrupt paragraphs the way Obsidian/CommonMark do."""
+        lines = body.split("\n")
+        in_fence = False
+        fence_char = ""
+        fence_len = 0
+        output = []
+
+        for line in lines:
+            if in_fence:
+                close = re.match(rf"^([ \t]{{0,3}}){re.escape(fence_char)}{{{fence_len},}}[ \t]*$", line)
+                if close:
+                    in_fence = False
+                output.append(line)
+                continue
+
+            fence_open = self.FENCE_OPEN_RE.match(line)
+            if fence_open:
+                in_fence = True
+                fence_marker = fence_open.group(2)
+                fence_char = fence_marker[0]
+                fence_len = len(fence_marker)
+                output.append(line)
+                continue
+
+            if (
+                output
+                and self.LIST_ITEM_RE.match(line)
+                and output[-1].strip() != ""
+                and not self.LIST_ITEM_RE.match(output[-1])
+            ):
+                output.append("")
+            output.append(line)
+
+        return "\n".join(output)
+
     def parse_markdown(self, filepath):
         """Parse a markdown file into a normalized post dictionary."""
         max_size = 10 * 1024 * 1024
@@ -279,6 +347,7 @@ class ContentProcessor:
         default_title = os.path.splitext(filename)[0]
         title = str(resolve_frontmatter_value(frontmatter, "title", default_title)).strip() or default_title
         body = self.strip_duplicate_title_heading(body, title)
+        body = self.ensure_blank_line_before_lists(body)
 
         html_content = self.md.convert(body)
         toc_html = getattr(self.md, "toc", "")

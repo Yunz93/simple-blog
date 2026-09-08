@@ -100,6 +100,78 @@ class ContentProcessorTests(unittest.TestCase):
 
             self.assertRegex(post["content"], r"<h1[^>]*>Short Brand</h1>")
 
+    def test_obsidian_image_alt_width_becomes_html_width(self):
+        html = self.processor.optimize_content_html('<img alt="xx|300" src="xx.png">')
+        self.assertIn('alt="xx"', html)
+        self.assertIn('width="300"', html)
+        self.assertIn("width: 300px", html)
+        self.assertNotIn("|300", html)
+
+    def test_obsidian_image_alt_width_and_height_become_attributes(self):
+        html = self.processor.optimize_content_html('<img alt="cover|400x200" src="xx.png">')
+        self.assertIn('alt="cover"', html)
+        self.assertIn('width="400"', html)
+        self.assertIn('height="200"', html)
+
+    def test_plain_image_alt_is_not_treated_as_size(self):
+        html = self.processor.optimize_content_html('<img alt="1.00" src="xx.png">')
+        self.assertIn('alt="1.00"', html)
+        self.assertNotIn("width=", html)
+
+    def test_parse_markdown_applies_obsidian_image_width_syntax(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            post_path = Path(tmp_dir) / "sized.md"
+            post_path.write_text(
+                textwrap.dedent(
+                    """\
+                    ---
+                    title: Sized Image
+                    date: 2024-03-18
+                    ---
+
+                    ![xx|300](https://example.com/xx.png)
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            post = self.processor.parse_markdown(str(post_path))
+
+            self.assertIn('alt="xx"', post["content"])
+            self.assertIn('width="300"', post["content"])
+            self.assertNotIn("|300", post["content"])
+
+    def test_parse_markdown_renders_list_immediately_after_paragraph(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            post_path = Path(tmp_dir) / "list.md"
+            post_path.write_text(
+                textwrap.dedent(
+                    """\
+                    ---
+                    title: List Break
+                    date: 2024-03-18
+                    ---
+
+                    其中：
+                    - 微信公众号草稿：说明
+                    - Simple Blog：说明
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            post = self.processor.parse_markdown(str(post_path))
+
+            self.assertIn("<ul>", post["content"])
+            self.assertIn("<li>", post["content"])
+            self.assertIn("微信公众号草稿", post["content"])
+            self.assertNotRegex(post["content"], r"<p>[^<]*- 微信公众号草稿")
+
+    def test_ensure_blank_line_before_lists_skips_fenced_code(self):
+        body = "intro\n```\n- not a list\n```\n"
+        result = self.processor.ensure_blank_line_before_lists(body)
+        self.assertEqual(result, body)
+
     def test_video_link_only_paragraph_becomes_embed(self):
         html = self.processor.optimize_content_html(
             '<p><a href="https://youtu.be/abc123">https://youtu.be/abc123</a></p>'
