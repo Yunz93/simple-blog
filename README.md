@@ -144,13 +144,13 @@ simple-blog/
 
 ```yaml
 title: "Simple Blog"
-description: "爱吾所爱，一生自在"
-author: "BXYZ"
+description: "简洁现代的静态博客"
+author: "Your Name"
 url: "https://your-blog.vercel.app"
 posts_per_page: 10
 
-# 对接 markdown-press
-posts_source: "../posts"
+# 默认读取仓库内 posts/。对接 markdown-press 时改为 "../posts"
+posts_source: "posts"
 
 # 社交链接
 social:
@@ -158,7 +158,10 @@ social:
   twitter: "yourname"
   email: "your@email.com"
 
-footer: "© 2026 Simple Blog"
+footer: "© 2026 Simple Blog. All rights reserved."
+
+giscus:
+  enabled: false
 ```
 
 ## 文章格式
