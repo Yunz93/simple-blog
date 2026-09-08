@@ -235,6 +235,26 @@ class ContentProcessor:
         html_content = re.sub(r"<iframe\b[^>]*>", self.optimize_iframe_tag, html_content, flags=re.IGNORECASE)
         return html_content
 
+    @staticmethod
+    def normalize_heading_text(text):
+        return re.sub(r"\s+", " ", str(text)).strip()
+
+    def strip_duplicate_title_heading(self, body, title):
+        """Drop a leading H1 that repeats the template title."""
+        normalized_title = self.normalize_heading_text(title)
+        if not body or not normalized_title:
+            return body
+
+        patterns = (
+            re.compile(r"\A[ \t]*#(?!#)[ \t]+(.+?)[ \t]*#*[ \t]*(?:\n+|$)"),
+            re.compile(r"\A[ \t]*(.+?)[ \t]*\n[ \t]*=+[ \t]*(?:\n+|$)"),
+        )
+        for pattern in patterns:
+            match = pattern.match(body)
+            if match and self.normalize_heading_text(match.group(1)) == normalized_title:
+                return body[match.end() :].lstrip("\n")
+        return body
+
     def parse_markdown(self, filepath):
         """Parse a markdown file into a normalized post dictionary."""
         max_size = 10 * 1024 * 1024
@@ -255,6 +275,11 @@ class ContentProcessor:
                 except yaml.YAMLError as error:
                     print(f"警告: YAML frontmatter 解析失败 ({filepath}): {error}")
 
+        filename = os.path.basename(filepath)
+        default_title = os.path.splitext(filename)[0]
+        title = str(resolve_frontmatter_value(frontmatter, "title", default_title)).strip() or default_title
+        body = self.strip_duplicate_title_heading(body, title)
+
         html_content = self.md.convert(body)
         toc_html = getattr(self.md, "toc", "")
         self.md.reset()
@@ -264,10 +289,6 @@ class ContentProcessor:
         plain_text = html.unescape(plain_text)
         char_count = len(re.sub(r"\s+", "", plain_text))
         reading_minutes = max(1, round(char_count / 400))
-
-        filename = os.path.basename(filepath)
-        default_title = os.path.splitext(filename)[0]
-        title = str(resolve_frontmatter_value(frontmatter, "title", default_title)).strip() or default_title
 
         aliases = resolve_frontmatter_value(frontmatter, "aliases", title)
         if isinstance(aliases, str):
